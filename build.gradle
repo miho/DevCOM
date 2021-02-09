@@ -72,7 +72,7 @@ dependencies {
 
 jar {
     manifest {
-        attributes('Automatic-Module-Name': 'eu.mihosoft.streamutils')
+        attributes('Automatic-Module-Name': 'eu.mihosoft.devcom')
     }
 }
 
