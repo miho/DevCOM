@@ -43,7 +43,10 @@ wrapper {
 
 sourceCompatibility = '11'
 targetCompatibility = '11'
+[compileJava, compileTestJava]*.sourceCompatibility = '11'
+[compileJava, compileTestJava]*.targetCompatibility = '11'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
 
 tasks.withType(JavaCompile) {
     options.compilerArgs << "-Xlint:unchecked"   //<< "-Werror"
