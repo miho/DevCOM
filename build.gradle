@@ -1,0 +1,95 @@
+import java.text.SimpleDateFormat
+
+// enable intellij integration & load vmf version to be used
+buildscript {
+
+    ext.commonProps = new Properties()
+    rootProject.file("config/common.properties").withInputStream { commonProps.load(it) }
+
+    ext.vmfPluginIntelliJIntegration = true
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath "eu.mihosoft.vmf:vmf-gradle-plugin:${project.commonProps.get('vmf.version')}"
+    }
+}
+
+plugins {
+    id 'com.github.hierynomus.license' version '0.14.0'
+    id 'maven-publish'
+    id 'net.nemerosa.versioning' version '2.7.1'
+    id 'com.jfrog.bintray' version '1.8.4'
+    id 'com.github.ben-manes.versions' version '0.13.0'
+}
+
+plugins {
+    id 'java-library'
+}
+
+ext.commonProps = new Properties()
+rootProject.file("config/common.properties").withInputStream { commonProps.load(it) }
+
+apply plugin: 'eu.mihosoft.vmf'
+apply from: 'gradle/publishing.gradle'
+
+
+
+wrapper {
+    gradleVersion = '6.8'
+}
+
+sourceCompatibility = '11'
+targetCompatibility = '11'
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:unchecked"   //<< "-Werror"
+    options.compilerArgs << "-Xlint:deprecation" //<< "-Werror"
+}
+
+tasks.withType(Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13'
+
+    implementation 'eu.mihosoft.binarytypeutils:binarytypeutils:0.1.0'
+
+    implementation "org.tinylog:tinylog-api:2.0.1"
+    implementation "org.tinylog:tinylog-impl:2.0.1"
+
+    implementation 'com.fazecast:jSerialComm:[2.0.0,3.0.0)'
+}
+
+jar {
+    manifest {
+        attributes('Automatic-Module-Name': 'eu.mihosoft.streamutils')
+    }
+}
+
+license {
+    header = rootProject.file('config/HEADER')
+    strictCheck = true
+    ignoreFailures = true
+
+    mapping {
+        java   = 'SLASHSTAR_STYLE'
+        groovy = 'SLASHSTAR_STYLE'
+        fxml   = 'XML_STYLE'
+    }
+
+    ext.yearCurrent  = new SimpleDateFormat("yyyy").format(new Date())
+    ext.yearSince1   = '2019'
+    ext.author1 = 'Michael Hoffer <info@michaelhoffer.de>'
+
+    exclude '**/*.svg'
+}
