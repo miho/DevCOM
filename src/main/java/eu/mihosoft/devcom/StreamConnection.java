@@ -90,6 +90,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     public void open(InputStream inputStream, OutputStream outputStream) {
         this.inputStream = inputStream;
         this.outputStream = outputStream;
+        open();
     }
 
     /**
@@ -137,7 +138,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                 } catch (IOException e) {
                     if (onIOError != null) onIOError.accept(this, e);
                     else {
-                        org.tinylog.Logger.info(e);
+                        org.tinylog.Logger.error(e);
                     }
                 } catch (RuntimeException ex) {
                     org.tinylog.Logger.debug(ex);
@@ -170,6 +171,8 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         } catch (IOException e) {
             throw new RuntimeException("Cannot close this connection", e);
         }
+
+        open = false;
     }
 
     @Override

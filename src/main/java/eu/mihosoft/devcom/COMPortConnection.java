@@ -145,13 +145,13 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
         try {
             this.port = openPort(config);
+            var inputStream = port.getInputStream();
+            var outputStream = port.getOutputStream();
+            connection.open(inputStream, outputStream);
+
         } catch(Exception ex) {
             if (onPortFailed != null) onPortFailed.accept(this, ex); else throw ex;
         }
-        var inputStream = port.getInputStream();
-        var outputStream = port.getOutputStream();
-
-        connection.open(inputStream, outputStream);
     }
 
 
