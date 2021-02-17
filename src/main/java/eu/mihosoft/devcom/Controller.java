@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 /**
  * A device controller for concurrent communication, e.g., via (virtual) COM ports.
  */
-public class Controller<T,V extends DataConnection<T, ?>> {
+public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseable {
     private final Deque<Command<T>> cmdQueue = new LinkedBlockingDeque<>();
     private final Deque<Command<T>> replyQueue = new LinkedBlockingDeque<>();
     private Thread executorThread;
@@ -139,6 +139,7 @@ public class Controller<T,V extends DataConnection<T, ?>> {
     /**
      * Closes this controller (also shuts down schedulers/executors).
      */
+    @Override
     public void close() {
         if(queueThread!=null) {
             queueThread.interrupt();
