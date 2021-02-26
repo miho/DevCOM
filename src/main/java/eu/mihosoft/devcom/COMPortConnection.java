@@ -114,6 +114,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      */
     public void open(PortConfig config) {
         this.config = config;
+        open();
     }
 
     /**
