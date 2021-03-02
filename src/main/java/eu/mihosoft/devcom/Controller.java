@@ -122,10 +122,6 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                     } else {
                         cmdFuture.get(cmdTimeout, TimeUnit.MILLISECONDS);
                     }
-
-                    synchronized (queueThread) {
-                        queueThread.wait(1000);
-                    }
                 } catch(InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (Throwable e) {
