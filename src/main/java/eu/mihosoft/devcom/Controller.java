@@ -135,6 +135,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 queueThread = null;
             }
         } finally {
+            if(executor == null) return;
             try {
                 boolean success = executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
                 if(!success) {
