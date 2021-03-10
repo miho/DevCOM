@@ -12,25 +12,16 @@ import java.util.function.Consumer;
 public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseable {
     private final Deque<Command<T>> cmdQueue = new LinkedBlockingDeque<>();
     private final Deque<Command<T>> replyQueue = new LinkedBlockingDeque<>();
-    private Thread executorThread;
-    private ExecutorService executor;
+    private volatile ExecutorService executor;
     /*pkg private*/ final AtomicReference<CompletableFuture<Void>> queueTaskFuture = new AtomicReference<>();
-    private Thread queueThread;
-    private long cmdTimeout = 0/*no timeout*/;
+    private volatile Thread queueThread;
+    private volatile long cmdTimeout = 0/*no timeout, unit: ms*/;
 
     /**
      * Creates a new controller instance.
      */
     public Controller() {
-        executor = Executors.newSingleThreadExecutor((r)-> {
-            if(executorThread!=null) {
-                throw new RuntimeException("Cannot switch threads for cmd-send executor. Create a new controller instance.");
-            }
-
-            org.tinylog.Logger.info("cmd-send executor initialized.");
-
-            return executorThread = new Thread(r);
-        });
+        executor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -72,13 +63,14 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                     var cmd = cmdQueue.pollFirst();
                     if(cmd==null) {
                         synchronized (queueThread) {
-                            queueThread.wait(1000);
+                            queueThread.wait(1000/*ms*/);
                         }
                         continue; // nothing to process
                     }
 
                     CompletableFuture<Void> cmdFuture = new CompletableFuture<>();
                     queueTaskFuture.set(cmdFuture);
+                    if(executor == null) executor = Executors.newSingleThreadExecutor();
                     executor.execute(() -> {
                         // don't process consumed commands
                         if (cmd.isConsumed()) {
@@ -137,14 +129,22 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      */
     @Override
     public void close() {
-        if(queueThread!=null) {
-            queueThread.interrupt();
-            queueThread = null;
-        }
-        executor.shutdown();
-        if(executorThread!=null) {
-            executorThread.interrupt();
-            executorThread = null;
+        try {
+            if(queueThread!=null) {
+                queueThread.interrupt();
+                queueThread = null;
+            }
+        } finally {
+            try {
+                boolean success = executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+                if(!success) {
+                    throw new RuntimeException("error occurred while closing this controller");
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException("error occurred while closing this controller");
+            } finally {
+                executor = null;
+            }
         }
     }
 
