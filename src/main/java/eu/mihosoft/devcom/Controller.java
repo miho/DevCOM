@@ -137,17 +137,40 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         } finally {
             if(executor == null) return;
             try {
-                boolean success = executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
-                if(!success) {
-                    throw new RuntimeException("error occurred while closing this controller");
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException("error occurred while closing this controller");
+                executor.shutdown();
             } finally {
                 executor = null;
             }
         }
     }
+
+    /**
+     * Closes this controller. This method blocks until the controller is closed
+     * (all tasks have been executed), or the timeout occurs. If no timeout is specified
+     * the associated executor will shutdown immediately.
+     * @param timeout the timeout in milliseconds
+     */
+    public boolean close(final long timeout) throws InterruptedException {
+        try {
+            if(queueThread!=null) {
+                queueThread.interrupt();
+                queueThread = null;
+            }
+        } finally {
+            if(executor == null) return true;
+            try {
+                if(timeout == 0) {
+                    executor.shutdownNow();
+                    return true;
+                } else {
+                    return executor.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+                }
+            } finally {
+                executor = null;
+            }
+        }
+    }
+
 
     /**
      * Sends a command to the device and waits for a reply (blocking).
