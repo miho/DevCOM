@@ -23,7 +23,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private Consumer<StreamConnection<T>> onConnectionOpened;
     // task to be executed if the communication with the selected streams failed
     private BiConsumer<StreamConnection<T>, Exception> onIOError;
-    private Consumer<T> onDataReceived;
+    private volatile Consumer<T> onDataReceived;
     private InputStream inputStream;
     private OutputStream outputStream;
     private Thread receiveThread;
@@ -103,6 +103,15 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         this.inputStream = inputStream;
         this.outputStream = outputStream;
 
+        if (this.inputStream == null || this.outputStream == null) {
+            throw new RuntimeException("Please specify streams before trying to open this connection. " +
+                    "See 'setStreams(InputStream inputStream, OutputStream outputStream)'.");
+        }
+
+        if(isOpen()) {
+            throw new RuntimeException("Please don't set streams while this connection is open.");
+        }
+
         return this;
     }
 
@@ -138,7 +147,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                 } catch (IOException e) {
                     if (onIOError != null) onIOError.accept(this, e);
                     else {
-                        org.tinylog.Logger.error(e);
+                        org.tinylog.Logger.debug(e);
                     }
                 } catch (RuntimeException ex) {
                     org.tinylog.Logger.debug(ex);
@@ -153,6 +162,11 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
     @Override
     public void writeData(T msg) throws IOException {
+
+        if(!isOpen()) {
+            throw new RuntimeException("Open this connection before writing to it.");
+        }
+
         format.writeData(msg, outputStream);
         outputStream.flush();
     }

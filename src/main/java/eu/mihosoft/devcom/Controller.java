@@ -86,7 +86,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                     if (cmd.getOnError() != null) {
                                         cmd.getOnError().accept(cmd.getData(), ex);
                                     } else {
-                                        org.tinylog.Logger.error(ex, "Cannot send command: {}", cmd.getData());
+                                        org.tinylog.Logger.debug(ex, "Cannot send command: {}", cmd.getData());
                                     }
                                 }
                             }
@@ -99,7 +99,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             } catch (IOException e) {
                                 replyQueue.remove(cmd);
                                 if (cmd.getOnError() != null) {
-                                    cmd.getOnError().accept(msg, e);
+                                    try {
+                                        cmd.getOnError().accept(msg, e);
+                                    } catch(Exception ex) {
+                                        // exception handled by 'onError'
+                                    }
                                 } else {
                                     throw new RuntimeException(e);
                                 }
@@ -117,7 +121,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 } catch(InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (Throwable e) {
-                    org.tinylog.Logger.error(e, "QUEUE error:");
+                    org.tinylog.Logger.debug(e, "QUEUE error:");
                 }
             }
         });
@@ -183,7 +187,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             return cmd;
         } catch (InterruptedException | ExecutionException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
-            org.tinylog.Logger.info(e);
+            org.tinylog.Logger.debug(e);
             throw ex;
         }
     }
@@ -205,7 +209,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      */
     public Command<T> sendCommandAsync(T msg) {
         var command = new Command<T>(msg, null, (m, e)-> {
-            org.tinylog.Logger.error(e, "Cannot send command: {}", m);
+            String eMsg = "Cannot send command: " + m;
+            org.tinylog.Logger.debug(e, eMsg);
+            throw new RuntimeException(eMsg, e);
         }, null);
         sendCommandAsync(command);
         return command;
@@ -221,7 +227,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             return sendCommandAsync(msg).getReply().get(1000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException|TimeoutException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
-            org.tinylog.Logger.info(e);
+            org.tinylog.Logger.debug(e);
             throw ex;
         }
     }

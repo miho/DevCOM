@@ -155,7 +155,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         }
     }
 
-
     @Override
     public void writeData(T msg) throws IOException {
         connection.writeData(msg);
@@ -215,15 +214,15 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
             if (!port.openPort()) {
                 var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
-                org.tinylog.Logger.info(ex);
+                org.tinylog.Logger.debug(ex);
                 throw ex;
             }
 
             result.set(port);
 
         }), () -> {
-            var ex = new RuntimeException("Cannot find selected COM port");
-            org.tinylog.Logger.info(ex);
+            var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
+            org.tinylog.Logger.debug(ex);
             throw ex;
         });
 
