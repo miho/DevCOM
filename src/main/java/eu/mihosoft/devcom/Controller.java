@@ -51,6 +51,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 }
             });
         };
+
         dataConnection.setOnDataReceived(onDataReceived);
 
         if(queueThread!=null) {
@@ -145,6 +146,26 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             } finally {
                 executor = null;
             }
+
+            cmdQueue.forEach(cmd -> {
+                try {
+                    cmd.requestCancellation();
+                } catch (Exception ex) {
+                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                }
+            });
+
+            cmdQueue.clear();
+
+            replyQueue.forEach(cmd -> {
+                try {
+                    cmd.requestCancellation();
+                } catch (Exception ex) {
+                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                }
+            });
+
+            replyQueue.clear();
         }
     }
 
@@ -161,6 +182,27 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 queueThread = null;
             }
         } finally {
+
+            cmdQueue.forEach(cmd -> {
+                try {
+                    cmd.requestCancellation();
+                } catch (Exception ex) {
+                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                }
+            });
+
+            cmdQueue.clear();
+
+            replyQueue.forEach(cmd -> {
+                try {
+                    cmd.requestCancellation();
+                } catch (Exception ex) {
+                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                }
+            });
+
+            replyQueue.clear();
+
             if(executor == null) return true;
             try {
                 if(timeout == 0) {

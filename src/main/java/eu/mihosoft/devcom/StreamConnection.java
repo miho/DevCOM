@@ -144,13 +144,11 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                     if (onDataReceived != null) {
                         CompletableFuture.runAsync(()->onDataReceived.accept(p));
                     }
-                } catch (IOException e) {
+                } catch (IOException | RuntimeException e) {
                     if (onIOError != null) onIOError.accept(this, e);
                     else {
                         org.tinylog.Logger.debug(e);
                     }
-                } catch (RuntimeException ex) {
-                    org.tinylog.Logger.debug(ex);
                 }
             }
         });
