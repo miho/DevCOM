@@ -16,10 +16,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Stream connection for reading and writing data from io streams.
+ * Stream connection for reading and writing data from/to io streams.
  */
 public final class StreamConnection<T> implements DataConnection<T, StreamConnection<T>> {
-    // task to be executed if the selected COM-port has been successfully opened
+    // task to be executed if the selected connection has been successfully opened
     private Consumer<StreamConnection<T>> onConnectionOpened;
     // task to be executed if the communication with the selected streams failed
     private BiConsumer<StreamConnection<T>, Exception> onIOError;

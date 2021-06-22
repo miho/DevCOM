@@ -16,8 +16,8 @@ public class Command<T> {
     private final CompletableFuture<T> reply;
     private final BiConsumer<T, Exception> onError;
     private final Consumer<String> onCancellationRequested;
-    private boolean consumed;
-    private boolean cancellationRequested;
+    private volatile boolean consumed;
+    private volatile boolean cancellationRequested;
 
     /**
      * Creates a new command.

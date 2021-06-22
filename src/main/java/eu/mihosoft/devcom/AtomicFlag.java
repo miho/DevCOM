@@ -27,8 +27,18 @@ public final class AtomicFlag {
     }
 
     /**
+     * Creates a new atomic flag.
+     *
+     * @param atomicBoolean the atomic boolean to wrap
+     */
+    public AtomicFlag(AtomicBoolean atomicBoolean) {
+        flag = atomicBoolean;
+    }
+
+    /**
      * Flip the wrapped AtomicBoolean.
-     * Sets the boolean value to false if it is true, and to true if it is false
+     *
+     * It sets the boolean value to false if it is true, and to true if it is false
      * with memory effects as specified by {@link java.lang.invoke.VarHandle#setVolatile}.
      *
      * @return new boolean value of AtomicBoolean

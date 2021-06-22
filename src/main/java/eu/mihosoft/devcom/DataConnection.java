@@ -44,7 +44,7 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
     DataFormat<T> getFormat();
 
     /**
-     * Indicates whether this connection is open.
+     * Indicates whether this connection is currently open.
      * @return {@code true} if this connection is currently open; {@code false} otherwise
      */
     boolean isOpen();
@@ -66,5 +66,8 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
     void open();
 
     @Override
+    /**
+     * Closes the connection.
+     */
     void close();
 }

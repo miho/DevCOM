@@ -16,12 +16,22 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     /*pkg private*/ final AtomicReference<CompletableFuture<Void>> queueTaskFuture = new AtomicReference<>();
     private volatile Thread queueThread;
     private volatile long cmdTimeout = 0/*no timeout, unit: ms*/;
+    private volatile Consumer<InterruptedException> onInterrupted;
 
     /**
      * Creates a new controller instance.
      */
     public Controller() {
-        executor = Executors.newSingleThreadExecutor();
+        this.executor = Executors.newSingleThreadExecutor();
+    }
+
+    /**
+     * Creates a new controller instance.
+     * @param onInterrupted the consumer to call if the command queue thread is interrupted (may be null)
+     */
+    public Controller(Consumer<InterruptedException> onInterrupted) {
+        setOnInterrupted(onInterrupted);
+        this.executor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -32,6 +42,14 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     public Controller<T,V> setCommandTimeout(long milliseconds) {
         this.cmdTimeout = milliseconds;
         return this;
+    }
+
+    /**
+     * Specifies the consumer to call if the command queue thread is interrupted.
+     * @param onInterrupted the consumer to call (may be null)
+     */
+    public final void setOnInterrupted(Consumer<InterruptedException> onInterrupted) {
+        this.onInterrupted = onInterrupted;
     }
 
     /**
@@ -104,6 +122,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                         cmd.getOnError().accept(msg, e);
                                     } catch(Exception ex) {
                                         // exception handled by 'onError'
+                                        throw new RuntimeException(e);
                                     }
                                 } else {
                                     throw new RuntimeException(e);
@@ -121,6 +140,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                     }
                 } catch(InterruptedException ex) {
                     Thread.currentThread().interrupt();
+                    if(onInterrupted!=null) {
+                        onInterrupted.accept(ex);
+                    }
                 } catch (Throwable e) {
                     org.tinylog.Logger.debug(e, "QUEUE error:");
                 }
@@ -275,7 +297,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     }
 
     /**
-     * Sends the specified data to the device.
+     * Sends the specified data to the device (no reply expected).
      *
      * @param msg the message to send
      */
