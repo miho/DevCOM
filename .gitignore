@@ -6,4 +6,11 @@ build
 
 .idea/
 .vscode/
+.settings
+.project
+.classpath
+
+bin/
+
+
 
