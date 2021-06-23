@@ -82,7 +82,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                     var cmd = cmdQueue.pollFirst();
                     if(cmd==null) {
                         synchronized (queueThread) {
-                            queueThread.wait(1000/*ms*/);
+                            this.wait(1000/*ms*/);
                         }
                         continue; // nothing to process
                     }
@@ -249,7 +249,12 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         try {
             sendCommandAsync(cmd).getReply().get();
             return cmd;
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            var ex = new RuntimeException("Reply cannot be received", e);
+            org.tinylog.Logger.debug(e);
+            throw ex;
+        } catch (ExecutionException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
             org.tinylog.Logger.debug(e);
             throw ex;
@@ -319,7 +324,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         }
 
         synchronized (queueThread) {
-            queueThread.notify();
+            notifyAll();
         }
     }
 
