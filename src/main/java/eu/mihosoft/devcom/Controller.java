@@ -317,11 +317,12 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * @param cmd the command to dispatch
      */
     private void dispatchCmd(Command<T> cmd) {
-        cmdQueue.addLast(cmd);
-
+        
         if(queueThread==null) {
             throw new RuntimeException("Not initialized. Please call 'init(...)' first");
         }
+        
+        cmdQueue.addLast(cmd);
 
         synchronized (queueThread) {
             notifyAll();
