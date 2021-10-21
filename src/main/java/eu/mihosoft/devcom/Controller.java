@@ -125,7 +125,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                         throw new RuntimeException(ex);
                                     }
                                 }
-                            } catch (IOException e) {
+                            } catch (Exception e) {
                                 replyQueue.remove(cmd);
                                 if (cmd.getOnError() != null) {
                                     try {
