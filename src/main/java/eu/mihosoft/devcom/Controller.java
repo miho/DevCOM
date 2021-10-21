@@ -10,6 +10,7 @@ import java.util.function.Consumer;
  * A device controller for concurrent communication, e.g., via (virtual) COM ports.
  */
 public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseable {
+    private final Object simpleLock = new Object();
     private final Deque<Command<T>> cmdQueue = new LinkedBlockingDeque<>();
     private final Deque<Command<T>> replyQueue = new LinkedBlockingDeque<>();
     private volatile ExecutorService executor;
@@ -81,8 +82,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 try {
                     var cmd = cmdQueue.pollFirst();
                     if(cmd==null) {
-                        synchronized (queueThread) {
-                            this.wait(1000/*ms*/);
+                        synchronized (simpleLock) {
+                            simpleLock.wait(1000/*ms*/);
                         }
                         continue; // nothing to process
                     }
@@ -324,8 +325,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         
         cmdQueue.addLast(cmd);
 
-        synchronized (queueThread) {
-            notifyAll();
+        synchronized (simpleLock) {
+            simpleLock.notifyAll();
         }
     }
 
