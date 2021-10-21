@@ -65,8 +65,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.stream().filter(c -> dataConnection.getFormat().isReply(c, msg)).findFirst().ifPresent( cmd -> {
                 replyQueue.removeFirstOccurrence(cmd);
                 cmd.getReply().complete(msg);
-                if(cmd.getOnResponse()!=null) {
-                    cmd.getOnResponse().accept(msg);
+                if(cmd.getOnReceived()!=null) {
+                    cmd.getOnReceived().accept(msg);
                 }
             });
         };
@@ -116,6 +116,15 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             T msg = cmd.getData();
                             try {
                                 dataConnection.writeData(msg);
+                                cmd.consume();
+                                if (cmd.getOnSent() != null) {
+                                    try {
+                                        cmd.getOnSent().accept(msg);
+                                    } catch(Exception ex) {
+                                        // exception handled by 'onError'
+                                        throw new RuntimeException(ex);
+                                    }
+                                }
                             } catch (IOException e) {
                                 replyQueue.remove(cmd);
                                 if (cmd.getOnError() != null) {
@@ -278,7 +287,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * @return a future that will be completed when the reply message has been received
      */
     public Command<T> sendCommandAsync(T msg) {
-        var command = new Command<T>(msg, null, (m, e)-> {
+        var command = new Command<T>(msg, null,null, (m, e)-> {
             String eMsg = "Cannot send command: " + m;
             org.tinylog.Logger.debug(e, eMsg);
             throw new RuntimeException(eMsg, e);
@@ -308,7 +317,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * @param msg the message to send
      */
     public void sendData(T msg) {
-        sendCommand(new Command<T>(msg, null /*no reply expected*/,(m, e)-> {
+        sendCommand(new Command<T>(msg, null, null /*no reply expected*/,(m, e)-> {
             org.tinylog.Logger.error(e, "Cannot send data: {}", m);
         },null));
     }

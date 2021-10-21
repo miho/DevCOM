@@ -12,7 +12,8 @@ import java.util.function.Consumer;
 public class Command<T> {
 
     private final T data;
-    private final Consumer<T> onResponse;
+    private final Consumer<T> onSent;
+    private final Consumer<T> onReceived;
     private final CompletableFuture<T> reply;
     private final BiConsumer<T, Exception> onError;
     private final Consumer<String> onCancellationRequested;
@@ -22,13 +23,15 @@ public class Command<T> {
     /**
      * Creates a new command.
      * @param data data to send
-     * @param onResponse consumer to call if a response has been received
+     * @param onSent consumer to call if a data has been sent
+     * @param onReceived consumer to call if a response has been received
      * @param onError consumer to call if an error occurs
      * @param onCancellationRequested consumer called if cancellation has been requested
      */
-    public Command(T data, Consumer<T> onResponse, BiConsumer<T, Exception> onError, Consumer<String> onCancellationRequested) {
+    public Command(T data, Consumer<T> onSent, Consumer<T> onReceived, BiConsumer<T, Exception> onError, Consumer<String> onCancellationRequested) {
         this.data = data;
-        this.onResponse = onResponse;
+        this.onSent = onSent;
+        this.onReceived = onReceived;
         this.reply = new CompletableFuture<>();
         this.onError = onError;
         this.onCancellationRequested = onCancellationRequested;
@@ -86,8 +89,11 @@ public class Command<T> {
     // PRIVATE METHODS
     // ---------------------------------------------------------
 
-    /*pkg private*/ Consumer<T> getOnResponse() {
-        return onResponse;
+    /*pkg private*/ Consumer<T> getOnReceived() {
+        return onReceived;
+    }
+    /*pkg private*/ Consumer<T> getOnSent() {
+        return onSent;
     }
 
     /*pkg private*/ Consumer<String> getOnHandleCancellationRequest() {
