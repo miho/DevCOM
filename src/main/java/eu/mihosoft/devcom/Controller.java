@@ -262,11 +262,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             var ex = new RuntimeException("Reply cannot be received", e);
-            org.tinylog.Logger.debug(e);
             throw ex;
         } catch (ExecutionException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
-            org.tinylog.Logger.debug(e);
             throw ex;
         }
     }
@@ -287,7 +285,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * @return a future that will be completed when the reply message has been received
      */
     public Command<T> sendCommandAsync(T msg) {
-        var command = new Command<T>(msg, null,null, (m, e)-> {
+        var command = new Command<T>(msg, null, null,null, (m, e)-> {
             String eMsg = "Cannot send command: " + m;
             org.tinylog.Logger.debug(e, eMsg);
             throw new RuntimeException(eMsg, e);
@@ -315,11 +313,34 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * Sends the specified data to the device (no reply expected).
      *
      * @param msg the message to send
+     * @return a future that will be completed when the data has been sent
+     */
+    public CompletableFuture<T> sendDataAsync(T msg) {
+        CompletableFuture<T> sentF = new CompletableFuture<>();
+        sendCommand(new Command<T>(msg, (m)->{sentF.complete(m);}, false,
+            null /*no reply expected*/,(m, e)-> {
+                sentF.completeExceptionally(e);
+        },null));
+        return sentF;
+    }
+
+    /**
+     * Sends the specified data to the device (no reply expected). This method blocks until the data has been sent.
+     *
+     * @param msg the message to send
      */
     public void sendData(T msg) {
-        sendCommand(new Command<T>(msg, null, null /*no reply expected*/,(m, e)-> {
-            org.tinylog.Logger.error(e, "Cannot send data: {}", m);
+        CompletableFuture<T> sentF = new CompletableFuture<>();
+        sendCommand(new Command<T>(msg, (m)->{sentF.complete(m);}, false,
+            null /*no reply expected*/,(m, e)-> {
+            sentF.completeExceptionally(e);
         },null));
+        try {
+            sentF.get(1000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException | ExecutionException|TimeoutException e) {
+            var ex = new RuntimeException("Data cannot be sent", e);
+            throw ex;
+        }
     }
 
     /**

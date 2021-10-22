@@ -24,7 +24,8 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     // task to be executed if the communication with the selected COM-port failed
     private BiConsumer<COMPortConnection<T>, Exception> onPortFailed;
     // serial port used for communication
-    private SerialPort port;
+    private volatile SerialPort port;
+    // stream connection
     private final StreamConnection<T> connection;
 
     /**
@@ -136,7 +137,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
         if(port!=null) {
             throw new RuntimeException("Please close the connection to the current port ('"
-                    + config.getName() + "') before disconnecting it.");
+                    + config.getName() + "') before connecting it.");
         }
 
         if (this.config == null) {

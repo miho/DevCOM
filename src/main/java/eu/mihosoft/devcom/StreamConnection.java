@@ -38,7 +38,6 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
      */
     public StreamConnection(DataFormat<T> format) {
         this.format = format;
-        this.onIOError    = (comPortBonsaiConnection, e) -> {e.printStackTrace();};
     }
 
     /**
@@ -136,7 +135,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         }
 
         receiveThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && isOpen()) {
                 try {
                     final var p = format.readData(inputStream);
                     CompletableFuture.runAsync(()->dataListeners.parallelStream().
@@ -145,8 +144,9 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                         CompletableFuture.runAsync(()->onDataReceived.accept(p));
                     }
                 } catch (IOException | RuntimeException e) {
-                    if (onIOError != null) onIOError.accept(this, e);
-                    else {
+                    if (onIOError != null) {
+                        onIOError.accept(this, e);
+                    } else {
                         org.tinylog.Logger.debug(e);
                     }
                 }
@@ -156,7 +156,6 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         this.open = true;
         if (onConnectionOpened != null) onConnectionOpened.accept(this);
     }
-
 
     @Override
     public void writeData(T msg) throws IOException {
@@ -176,6 +175,11 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     public void close() {
         if (receiveThread != null) {
             receiveThread.interrupt();
+            try {
+                receiveThread.join(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             receiveThread = null;
         }
 
