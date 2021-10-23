@@ -63,11 +63,11 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
     /**
      * Opens the connection.
      */
-    void open();
+    void open() throws RuntimeException;
 
     @Override
     /**
      * Closes the connection.
      */
-    void close();
+    void close() throws RuntimeException;
 }

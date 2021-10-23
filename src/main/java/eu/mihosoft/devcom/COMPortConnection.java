@@ -152,7 +152,8 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             connection.open(inputStream, outputStream);
 
         } catch(Exception ex) {
-            if (onPortFailed != null) onPortFailed.accept(this, ex); else throw ex;
+            if (onPortFailed != null) onPortFailed.accept(this, ex);
+            throw ex;
         }
     }
 
@@ -178,13 +179,15 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      * Closes the connection to the specified port.
      */
     @Override
-    public void close() {
+    public void close() throws RuntimeException{
         try {
             connection.close();
         } finally {
             if (port != null) {
                 if (!port.closePort()) {
-                    throw new RuntimeException("Could not close port: " + config.getName());
+                    var ex = new RuntimeException("Could not close port: " + config.getName());
+                    if (onPortFailed != null) onPortFailed.accept(this, ex);
+                    throw ex;
                 }
                 port = null;
             }
@@ -196,7 +199,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      *
      * @return the serial port object to be used form communication
      */
-    private static SerialPort openPort(PortConfig config) {
+    private static SerialPort openPort(PortConfig config)  throws RuntimeException{
 
         AtomicReference<SerialPort> result = new AtomicReference<>();
 
@@ -215,7 +218,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
             if (!port.openPort()) {
                 var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
-                org.tinylog.Logger.debug(ex);
                 throw ex;
             }
 
@@ -223,7 +225,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
         }), () -> {
             var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
-            org.tinylog.Logger.debug(ex);
             throw ex;
         });
 
