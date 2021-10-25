@@ -50,18 +50,22 @@ public final class Command<T> {
         this.onCancellationRequested = onCancellationRequested;
     }
 
+    /**
+     * Resets this command for being reused for sending and receiving data.
+     */
+    @Deprecated
     // TODO 25.10.2021 would work great but needs more thoughts on identity checks and collections
-//    /**
-//     * Resets this command for being reused for sending and receiving data.
-//     */
-//    public void reset() {
-//        this.consumed = false;
-//        var r = this.reply;
-//        if(r!=null) {
-//            r.completeExceptionally(new RuntimeException("Reset"));
-//        }
-//        this.reply = null;
-//    }
+    public void reset() {
+        if(!consumed) throw new RuntimeException(
+            "Cannot reset unused command. " +
+                "This command might be enqueued and should not be used more than once per queue");
+        this.consumed = false;
+        var r = this.reply;
+        if(r!=null) {
+            r.completeExceptionally(new RuntimeException("Reset"));
+        }
+        this.reply = null;
+    }
 
     /**
      * Returns a new Command builder.

@@ -37,7 +37,7 @@ apply from: 'gradle/publishing.gradle'
 
 
 wrapper {
-    gradleVersion = '7.1'
+    gradleVersion = '7.2'
 }
 
 sourceCompatibility = '11'

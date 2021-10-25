@@ -375,7 +375,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     private void dispatchCmd(Command<T> cmd) {
         
         if(queueThread==null) {
-            throw new RuntimeException("Not initialized. Please call 'init(...)' first");
+            throw new RuntimeException("Not initialized. Please call 'init(...)' first.");
+        }
+
+        if(cmd.isConsumed()) {
+            throw new RuntimeException("Command already consumed. Please call 'reset()' first or use a fresh command instance.");
         }
         
         cmdQueue.addLast(cmd);
