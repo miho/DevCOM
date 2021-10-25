@@ -127,6 +127,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                 }
                             } catch (Exception e) {
                                 replyQueue.remove(cmd);
+                                cmdFuture.completeExceptionally(e);
+                                if(cmd.isReplyExpected()) cmd.getReply().completeExceptionally(e);
                                 if (cmd.getOnError() != null) {
                                     try {
                                         cmd.getOnError().accept(msg, e);
