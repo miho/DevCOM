@@ -62,8 +62,6 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
         Consumer<T> onDataReceived = msg -> {
 
-//            System.out.println("!!! RECEIVED");
-
             // find first element that matches reply
             replyQueue.stream()
                 .filter(c -> dataConnection.getFormat().isReply(c, msg)).findFirst().ifPresent( cmd -> {
@@ -81,7 +79,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
                     cmd.requestCancellation();
-                    cmd.getReply().completeExceptionally(new RuntimeException("Connection closed"));
+                    cmd.getReply().completeExceptionally(new RuntimeException("Cancelling. Connection closed"));
                 });
             replyQueue.clear();
         });
@@ -213,7 +211,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.forEach(cmd -> {
                 try {
                     cmd.requestCancellation();
-                    cmd.getReply().completeExceptionally(new RuntimeException("Cancellation requested. Controller shutdown."));
+                    cmd.getReply().completeExceptionally(
+                        new RuntimeException("Cancellation requested. Controller shutdown.")
+                    );
                 } catch (Exception ex) {
                     org.tinylog.Logger.debug(ex, "Command cancellation error");
                 }
@@ -250,7 +250,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.forEach(cmd -> {
                 try {
                     cmd.requestCancellation();
-                    cmd.getReply().completeExceptionally(new RuntimeException("Cancellation requested. Controller shutdown."));
+                    cmd.getReply().completeExceptionally(
+                        new RuntimeException("Cancellation requested. Controller shutdown.")
+                    );
                 } catch (Exception ex) {
                     org.tinylog.Logger.debug(ex, "Command cancellation error");
                 }
