@@ -29,7 +29,11 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private Thread receiveThread;
     private final DataFormat<T> format;
     private final List<Consumer<T>> dataListeners = new ArrayList<>();
+    private final List<Consumer<DataConnection<T, ?>>> openListeners = new ArrayList<>();
+    private final List<Consumer<DataConnection<T, ?>>> closeListeners = new ArrayList<>();
     private boolean open;
+
+    private Consumer<DataConnection<T, ?>> onConnectionClosed;
 
     /**
      * Creates a new connection instance.
@@ -52,7 +56,6 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         this.onConnectionOpened = onConnectionOpened;
         this.onIOError = onIOError;
     }
-
 
     @Override
     public StreamConnection<T> setOnDataReceived(Consumer<T> onDataReceived) {
@@ -79,6 +82,19 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     public Subscription registerDataListener(Consumer<T> l) {
         dataListeners.add(l);
         return ()-> dataListeners.remove(l);
+    }
+
+    @Override
+    public Subscription registerConnectionOpenedListener(Consumer<DataConnection<T, ?>> l) {
+        openListeners.add(l);
+        return ()-> openListeners.remove(l);
+    }
+
+
+    @Override
+    public Subscription registerConnectionClosedListener(Consumer<DataConnection<T, ?>> l) {
+        closeListeners.add(l);
+        return ()-> closeListeners.remove(l);
     }
 
     /**
@@ -144,6 +160,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                         CompletableFuture.runAsync(()->onDataReceived.accept(p));
                     }
                 } catch (IOException | RuntimeException e) {
+
                     if (onIOError != null) {
                         onIOError.accept(this, e);
                     } else {
@@ -154,6 +171,8 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         });
         receiveThread.start();
         this.open = true;
+        CompletableFuture.runAsync(()->openListeners.parallelStream().
+            filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this)));
         if (onConnectionOpened != null) onConnectionOpened.accept(this);
     }
 
@@ -173,12 +192,15 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
      */
     @Override
     public void close() {
+
         if (receiveThread != null) {
+
             receiveThread.interrupt();
+
             try {
                 receiveThread.join(3000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+               receiveThread.interrupt();
             }
             receiveThread = null;
         }
@@ -189,6 +211,16 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         }
 
         open = false;
+
+        CompletableFuture.runAsync(()->closeListeners.parallelStream().
+            filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this)));
+
+        if (onConnectionClosed != null) onConnectionClosed.accept(this);
+    }
+
+    @Override
+    public void setOnConnectionClosed(Consumer<DataConnection<T, ?>> onConnectionClosed) {
+        this.onConnectionClosed = onConnectionClosed;
     }
 
     @Override

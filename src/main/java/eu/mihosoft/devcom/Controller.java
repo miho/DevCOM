@@ -61,8 +61,12 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     public void init(DataConnection<T, V> dataConnection) {
 
         Consumer<T> onDataReceived = msg -> {
+
+//            System.out.println("!!! RECEIVED");
+
             // find first element that matches reply
-            replyQueue.stream().filter(c -> dataConnection.getFormat().isReply(c, msg)).findFirst().ifPresent( cmd -> {
+            replyQueue.stream()
+                .filter(c -> dataConnection.getFormat().isReply(c, msg)).findFirst().ifPresent( cmd -> {
                 replyQueue.removeFirstOccurrence(cmd);
                 cmd.getReply().complete(msg);
                 if(cmd.getOnReceived()!=null) {
@@ -72,6 +76,15 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         };
 
         dataConnection.setOnDataReceived(onDataReceived);
+
+        dataConnection.setOnConnectionClosed(o -> {
+            replyQueue.stream().filter(cmd->cmd!=null).
+                forEach(cmd->{
+                    cmd.requestCancellation();
+                    cmd.getReply().completeExceptionally(new RuntimeException("Connection closed"));
+                });
+            replyQueue.clear();
+        });
 
         if(queueThread!=null) {
             queueThread.interrupt();
@@ -113,7 +126,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                 }
                             }
                         } else {
-                            if(cmd.isReplyExpected()) replyQueue.addLast(cmd);
+                            if(cmd.isReplyExpected()) {
+                                replyQueue.addLast(cmd);
+                            } else {
+                                cmd.getReply().complete(null);
+                            }
 
                             T msg = cmd.getData();
                             try {
@@ -196,6 +213,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.forEach(cmd -> {
                 try {
                     cmd.requestCancellation();
+                    cmd.getReply().completeExceptionally(new RuntimeException("Cancellation requested. Controller shutdown."));
                 } catch (Exception ex) {
                     org.tinylog.Logger.debug(ex, "Command cancellation error");
                 }
@@ -232,6 +250,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.forEach(cmd -> {
                 try {
                     cmd.requestCancellation();
+                    cmd.getReply().completeExceptionally(new RuntimeException("Cancellation requested. Controller shutdown."));
                 } catch (Exception ex) {
                     org.tinylog.Logger.debug(ex, "Command cancellation error");
                 }

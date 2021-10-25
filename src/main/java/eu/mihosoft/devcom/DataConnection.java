@@ -30,6 +30,20 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
     Subscription registerDataListener(Consumer<T> l);
 
     /**
+     * Registers a listener that is notified whenever the connection is opened.
+     * @param l the data listener to register
+     * @return a subscription that allows a listener to be unsubscribed
+     */
+    Subscription registerConnectionOpenedListener(Consumer<DataConnection<T, ?>> l);
+
+    /**
+     * Registers a listener that is notified whenever the connection is closed.
+     * @param l the data listener to register
+     * @return a subscription that allows a listener to be unsubscribed
+     */
+    Subscription registerConnectionClosedListener(Consumer<DataConnection<T, ?>> l);
+
+    /**
      * Writes the specified raw message to the output stream.
      *
      * @param msg          the message to send
@@ -70,4 +84,10 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
      * Closes the connection.
      */
     void close() throws RuntimeException;
+
+    /**
+     *
+     * @param onConnectionClosed
+     */
+    void setOnConnectionClosed(Consumer<DataConnection<T, ?>> onConnectionClosed);
 }

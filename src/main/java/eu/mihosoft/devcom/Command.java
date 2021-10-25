@@ -45,18 +45,23 @@ public final class Command<T> {
         this.onSent = onSent;
         this.onReceived = onReceived;
         this.replyExpected = replyExpected;
-        this.reply = new CompletableFuture<>();
+        this.reply = null;
         this.onError = onError;
         this.onCancellationRequested = onCancellationRequested;
     }
 
-    /**
-     * Resets this command for being reused for sending and receiving data.
-     */
-    public void reset() {
-        this.consumed = false;
-        this.reply = new CompletableFuture<>();
-    }
+    // TODO 25.10.2021 would work great but needs more thoughts on identity checks and collections
+//    /**
+//     * Resets this command for being reused for sending and receiving data.
+//     */
+//    public void reset() {
+//        this.consumed = false;
+//        var r = this.reply;
+//        if(r!=null) {
+//            r.completeExceptionally(new RuntimeException("Reset"));
+//        }
+//        this.reply = null;
+//    }
 
     /**
      * Returns a new Command builder.
@@ -174,6 +179,13 @@ public final class Command<T> {
      * @return reply
      */
     public CompletableFuture<T> getReply() {
+
+        synchronized (this) {
+            if (reply == null) {
+                reply = new CompletableFuture<>();
+            }
+        }
+
         return reply;
     }
 

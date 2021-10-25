@@ -191,7 +191,18 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                 }
                 port = null;
             }
+
         }
+    }
+
+    @Override
+    public Subscription registerConnectionClosedListener(Consumer<DataConnection<T, ?>> l) {
+        return connection.registerConnectionClosedListener(l);
+    }
+
+    @Override
+    public Subscription registerConnectionOpenedListener(Consumer<DataConnection<T, ?>> l) {
+        return connection.registerConnectionOpenedListener(l);
     }
 
     /**
@@ -244,5 +255,10 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     public static List<String> getPortNames() {
         return Arrays.asList(SerialPort.getCommPorts()).stream().map(p->p.getSystemPortName()).
                 collect(Collectors.toList());
+    }
+
+    @Override
+    public void setOnConnectionClosed(Consumer<DataConnection<T, ?>> onConnectionClosed) {
+        connection.setOnConnectionClosed(onConnectionClosed);
     }
 }
