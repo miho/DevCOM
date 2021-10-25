@@ -97,7 +97,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             return;
                         }
                         if (cmd.isCancellationRequested()) {
-                            cmd.getReply().completeExceptionally(new RuntimeException("Command '" + cmd + "' cancelled."));
+                            cmd.getReply().completeExceptionally(
+                                new RuntimeException("Command '" + cmd + "' cancelled.")
+                            );
                             var onCancel = cmd.getOnHandleCancellationRequest();
                             if (onCancel != null) {
                                 try {
