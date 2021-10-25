@@ -205,6 +205,11 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         return connection.registerConnectionOpenedListener(l);
     }
 
+    @Override
+    public Subscription registerIOErrorListener(BiConsumer<DataConnection<T, ?>, Exception> l) {
+        return connection.registerIOErrorListener(l);
+    }
+
     /**
      * Utility method for opening the selected COM-port.
      *

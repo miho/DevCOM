@@ -44,6 +44,14 @@ public interface DataConnection<T, V extends DataConnection<T, ?>> extends AutoC
     Subscription registerConnectionClosedListener(Consumer<DataConnection<T, ?>> l);
 
     /**
+     * Registers a listener that is notified whenever an I/O error occurees.
+     * @param l the data listener to register
+     * @return a subscription that allows a listener to be unsubscribed
+     */
+    Subscription registerIOErrorListener(BiConsumer<DataConnection<T, ?>, Exception> l);
+
+
+    /**
      * Writes the specified raw message to the output stream.
      *
      * @param msg          the message to send

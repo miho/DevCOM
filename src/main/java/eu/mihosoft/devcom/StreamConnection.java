@@ -31,6 +31,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private final List<Consumer<T>> dataListeners = new ArrayList<>();
     private final List<Consumer<DataConnection<T, ?>>> openListeners = new ArrayList<>();
     private final List<Consumer<DataConnection<T, ?>>> closeListeners = new ArrayList<>();
+    private final List<BiConsumer<DataConnection<T, ?>, Exception>> ioErrorListeners = new ArrayList<>();
     private boolean open;
 
     private Consumer<DataConnection<T, ?>> onConnectionClosed;
@@ -97,6 +98,12 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         return ()-> closeListeners.remove(l);
     }
 
+    @Override
+    public Subscription registerIOErrorListener(BiConsumer<DataConnection<T, ?>, Exception> l) {
+        ioErrorListeners.add(l);
+        return ()-> ioErrorListeners.remove(l);
+    }
+
     /**
      * Opens the specified port and connects to it.
      * @param inputStream input stream to be used by this connection
@@ -161,6 +168,9 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                     }
                 } catch (IOException | RuntimeException e) {
 
+                    CompletableFuture.runAsync(()->ioErrorListeners.parallelStream().
+                        filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this, e)));
+
                     if (onIOError != null) {
                         onIOError.accept(this, e);
                     } else {
@@ -183,8 +193,22 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
             throw new RuntimeException("Open this connection before writing to it.");
         }
 
-        format.writeData(msg, outputStream);
-        outputStream.flush();
+        try {
+
+            format.writeData(msg, outputStream);
+            outputStream.flush();
+
+        } catch (IOException | RuntimeException e) {
+
+            CompletableFuture.runAsync(()->ioErrorListeners.parallelStream().
+                filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this, e)));
+
+            if (onIOError != null) {
+                onIOError.accept(this, e);
+            }
+
+            throw e;
+        }
     }
 
     /**
@@ -207,6 +231,13 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
         try(InputStream is = this.inputStream; OutputStream os = this.outputStream) {
         } catch (IOException e) {
+            CompletableFuture.runAsync(()->ioErrorListeners.parallelStream().
+                filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this, e)));
+
+            if (onIOError != null) {
+                onIOError.accept(this, e);
+            }
+
             throw new RuntimeException("Cannot close this connection", e);
         }
 
