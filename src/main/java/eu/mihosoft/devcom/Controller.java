@@ -101,9 +101,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
         queueThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
+                Command<T> cmdImmutable = null;
                 try {
                     var cmd = cmdQueue.pollFirst();
-                    if(cmd==null) {
+                    cmdImmutable = cmd;
+                    if (cmd == null) {
                         synchronized (simpleLock) {
                             simpleLock.wait(1000/*ms*/);
                         }
@@ -112,7 +114,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
                     CompletableFuture<Void> cmdFuture = new CompletableFuture<>();
                     queueTaskFuture.set(cmdFuture);
-                    if(executor == null) executor = Executors.newSingleThreadExecutor();
+                    if (executor == null) executor = Executors.newSingleThreadExecutor();
                     executor.execute(() -> {
                         // don't process consumed commands
                         if (cmd.isConsumed()) {
@@ -135,8 +137,15 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                 }
                             }
                         } else {
-                            if(cmd.isReplyExpected()) {
+                            if (cmd.isReplyExpected()) {
                                 replyQueue.addLast(cmd);
+                                // ensure result is invalidated if timeout exceeded
+                                CompletableFuture.delayedExecutor(cmdTimeout, TimeUnit.MILLISECONDS).execute(()->{
+                                    if(cmd.getReply().isDone()||cmd.getReply().isCancelled()) return;
+
+                                    cmd.getReply().completeExceptionally(new TimeoutException());
+                                    replyQueue.removeFirstOccurrence(cmd);
+                                });
                             } else {
                                 cmd.getReply().complete(null);
                             }
@@ -148,7 +157,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                 if (cmd.getOnSent() != null) {
                                     try {
                                         cmd.getOnSent().accept(msg);
-                                    } catch(Exception ex) {
+                                    } catch (Exception ex) {
                                         // exception handled by 'onError'
                                         throw new RuntimeException(ex);
                                     }
@@ -156,11 +165,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             } catch (Exception e) {
                                 replyQueue.remove(cmd);
                                 cmdFuture.completeExceptionally(e);
-                                if(cmd.isReplyExpected()) cmd.getReply().completeExceptionally(e);
+                                if (cmd.isReplyExpected()) cmd.getReply().completeExceptionally(e);
                                 if (cmd.getOnError() != null) {
                                     try {
                                         cmd.getOnError().accept(msg, e);
-                                    } catch(Exception ex) {
+                                    } catch (Exception ex) {
                                         // exception handled by 'onError'
                                         throw new RuntimeException(e);
                                     }
@@ -173,16 +182,19 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                         cmdFuture.complete(null);
                     });
 
-                    if(cmdTimeout==0) {
+                    if (cmdTimeout == 0) {
                         cmdFuture.get();
                     } else {
                         cmdFuture.get(cmdTimeout, TimeUnit.MILLISECONDS);
                     }
-                } catch(InterruptedException ex) {
+                } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
-                    if(onInterrupted!=null) {
+                    if (onInterrupted != null) {
                         onInterrupted.accept(ex);
                     }
+                    if(cmdImmutable!=null) cmdImmutable.getReply().completeExceptionally(ex);
+                } catch(TimeoutException ex) {
+                    if(cmdImmutable!=null) cmdImmutable.getReply().completeExceptionally(ex);
                 } catch (Throwable e) {
                     org.tinylog.Logger.debug(e, "QUEUE error:");
                 }

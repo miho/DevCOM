@@ -24,6 +24,10 @@ interface PortConfig {
     StopBits getStopBits();
     @DefaultValue("false")
     boolean isRS485ModeEnabled();
+
+    @DefaultValue("0")
+    int getWriteTimeout();
+
 }
 
 @Immutable
