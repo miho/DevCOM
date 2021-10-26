@@ -224,7 +224,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
             port.setComPortTimeouts(
                     SerialPort.TIMEOUT_READ_BLOCKING|SerialPort.TIMEOUT_READ_BLOCKING
-                    , config.getReadTimeout(), config.getWriteTimeout()
+                    , 0/*wait until data to read is available*/, config.getWriteTimeout()
             );
 
             port.setComPortParameters(config.getBaudRate(),

@@ -184,8 +184,10 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
                     if (cmdTimeout == 0) {
                         cmdFuture.get();
+                        cmdImmutable = null;
                     } else {
                         cmdFuture.get(cmdTimeout, TimeUnit.MILLISECONDS);
+                        cmdImmutable = null;
                     }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
@@ -195,8 +197,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                     if(cmdImmutable!=null) cmdImmutable.getReply().completeExceptionally(ex);
                 } catch(TimeoutException ex) {
                     if(cmdImmutable!=null) cmdImmutable.getReply().completeExceptionally(ex);
-                } catch (Throwable e) {
-                    org.tinylog.Logger.debug(e, "QUEUE error:");
+                } catch (Throwable ex) {
+                    if(cmdImmutable!=null) cmdImmutable.getReply().completeExceptionally(ex);
                 }
             }
         });
