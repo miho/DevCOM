@@ -34,7 +34,7 @@ public final class Device<T> implements AutoCloseable {
         return new DeviceBuilder<>();
     }
 
-    static final class DeviceBuilder<T> {
+    public static final class DeviceBuilder<T> {
         private BiConsumer<Device<T>, DataConnection<T, ?>> connectionBehavior;
 
         DeviceBuilder() {
