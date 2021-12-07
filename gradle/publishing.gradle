@@ -2,7 +2,6 @@
 // Collect publishing information
 // -----------------------------------------------------------------------------
 ext.publishing = [:]
-ext.publishing.bintray = [:]
 
 ext.publishing.pomName =  ext.publishing.artifactId
 
