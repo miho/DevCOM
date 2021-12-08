@@ -12,7 +12,7 @@ Protocol agnostic and concurrent device communication via I/O streams and COM po
 
 ### Requirements
 
-- Java >= 11 (currently tested with Java 17)
+- Java >= 17 (currently tested with Java 17)
 - Internet connection (dependencies are downloaded automatically)
 - IDE: [Gradle](http://www.gradle.org/) Plugin (not necessary for command line usage)
 
