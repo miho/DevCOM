@@ -1,21 +1,23 @@
 // -----------------------------------------------------------------------------
 // publishing information
 // -----------------------------------------------------------------------------
-ext.publishing.artifactId =  project.name.toLowerCase()
-ext.publishing.groupId    =  'eu.mihosoft.devcom'
-ext.publishing.versionId  =  ext.commonProps.get("publication.version")
+ext.publishingInfo.artifactId =  project.name.toLowerCase()
+ext.publishingInfo.groupId    =  'eu.mihosoft.devcom'
+ext.publishingInfo.versionId  =  ext.commonProps.get("publication.version")
 
-ext.publishing.developerName         = 'Michael Hoffer'
-ext.publishing.developerAlias        = 'miho'
-ext.publishing.developerEmail        = 'info@michaelhoffer.de'
-ext.publishing.inceptionYear         = '2019'
+ext.publishingInfo.developerName         = 'Michael Hoffer'
+ext.publishingInfo.developerAlias        = 'miho'
+ext.publishingInfo.developerEmail        = 'info@michaelhoffer.de'
+ext.publishingInfo.inceptionYear         = '2019'
 
-ext.publishing.desc                  = 'Device Communication utilities.'
-ext.publishing.license               = 'Apache-2.0'
-ext.publishing.licenseUrl            = 'https://github.com/miho/DevCOM/blob/master/LICENSE'
-ext.publishing.labels                = ['device communication', 'com ports', 'streams', 'vmf', 'vrl', 'modeling framework']
-ext.publishing.websiteUrl            = 'https://github.com/miho/DevCOM'
-ext.publishing.issueTrackerUrl       = 'https://github.com/miho/DevCOM/issues'
-ext.publishing.vcsUrl                = 'https://github.com/miho/DevCOM.git'
+ext.publishingInfo.desc                  = 'Device Communication utilities.'
+ext.publishingInfo.license               = 'Apache-2.0'
+ext.publishingInfo.licenseUrl            = 'https://github.com/miho/DevCOM/blob/master/LICENSE'
+ext.publishingInfo.labels                = ['device communication', 'com ports', 'streams', 'vmf', 'vrl', 'modeling framework']
+ext.publishingInfo.websiteUrl            = 'https://github.com/miho/DevCOM'
+ext.publishingInfo.issueTrackerUrl       = 'https://github.com/miho/DevCOM/issues'
+ext.publishingInfo.vcsUrl                = 'https://github.com/miho/DevCOM.git'
 
-ext.publishing.pomName               =  ext.publishing.artifactId
+ext.publishingInfo.gitHubMavenRepo       = "https://maven.pkg.github.com/miho/DevCOM"
+
+ext.publishingInfo.pomName               =  ext.publishingInfo.artifactId
