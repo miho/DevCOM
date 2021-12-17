@@ -232,7 +232,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                     config.getStopBits().getValue(),
                     config.getParityBits().getValue());
 
-            if (!port.openPort()) {
+            if (!port.openPort(config.getSafetyTimeout())) {
                 var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
                 throw ex;
             }

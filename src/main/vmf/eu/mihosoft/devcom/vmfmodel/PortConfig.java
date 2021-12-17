@@ -25,6 +25,9 @@ interface PortConfig {
     @DefaultValue("false")
     boolean isRS485ModeEnabled();
 
+    @DefaultValue("500")
+    int getSafetyTimeout();
+
     @DefaultValue("0")
     int getWriteTimeout();
 
