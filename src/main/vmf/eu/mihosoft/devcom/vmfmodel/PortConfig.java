@@ -1,8 +1,11 @@
 package eu.mihosoft.devcom.vmfmodel;
 
+import eu.mihosoft.vmf.core.Doc;
 import eu.mihosoft.vmf.core.DefaultValue;
 import eu.mihosoft.vmf.core.ExternalType;
 import eu.mihosoft.vmf.core.Immutable;
+
+import java.util.List;
 
 @ExternalType(pkgName = "eu.mihosoft.devcom")
 interface StopBits {}
@@ -39,4 +42,17 @@ interface DeviceInfo {
     String getDevice();
     String getMCUType();
     String getSerialNumber();
+}
+
+@Doc("Port event.")
+@Immutable()
+interface PortEvent {
+    @Doc("Timestamp (milliseconds since January 1st, 1970).")
+    long getTimestamp();
+
+    @Doc("Names of ports added since last scanning.")
+    String[] getAdded();
+
+    @Doc("Names of ports removed since last scanning.")
+    String[] getRemoved();
 }

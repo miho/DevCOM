@@ -1,5 +1,6 @@
 package eu.mihosoft.devcom;
 
+import eu.mihosoft.devcom.PortEvent;
 import vjavax.observer.Subscription;
 
 import java.util.*;
@@ -65,7 +66,7 @@ public enum PortScanner {
 
         f = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(()->{
             var evt = pollPorts();
-            if(!evt.added.isEmpty() || !evt.removed.isEmpty()) {
+            if(!evt.getAdded().isEmpty() || !evt.getRemoved().isEmpty()) {
                 for (var l : listeners) {
                     try {
                         l.accept(evt);
@@ -75,24 +76,6 @@ public enum PortScanner {
                 }
             }
         }, 0, period, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Port event.
-     */
-    public static record PortEvent(
-        /**
-         * Timestamp (milliseconds since January 1st, 1970).
-         */
-        long timestamp,
-        /**
-         * Names of ports added since last scanning.
-         */
-        List<String> added,
-        /**
-         * Names of ports removed since last scanning.
-         */
-        List<String> removed) {
     }
 
     /**
@@ -166,11 +149,11 @@ public enum PortScanner {
         portList.addAll(added);
         portList.removeAll(removed);
 
-        return new PortEvent(
-            System.currentTimeMillis(),
-            Collections.unmodifiableList(added),
-            Collections.unmodifiableList(removed)
-        );
+        return PortEvent.newBuilder()
+            .withTimestamp(System.currentTimeMillis())
+            .withAdded(Collections.unmodifiableList(added))
+            .withRemoved(Collections.unmodifiableList(removed))
+                .build();
     }
 
     /**

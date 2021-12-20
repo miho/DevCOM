@@ -150,7 +150,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             var inputStream = port.getInputStream();
             var outputStream = port.getOutputStream();
             connection.open(inputStream, outputStream);
-
         } catch(Exception ex) {
             if (onPortFailed != null) onPortFailed.accept(this, ex);
             throw ex;
@@ -184,10 +183,12 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             connection.close();
         } finally {
             if (port != null) {
-                if (!port.closePort()) {
-                    var ex = new RuntimeException("Could not close port: " + config.getName());
-                    if (onPortFailed != null) onPortFailed.accept(this, ex);
-                    throw ex;
+                synchronized (simplePortLock) {
+                    if (!port.closePort()) {
+                        var ex = new RuntimeException("Could not close port: " + config.getName());
+                        if (onPortFailed != null) onPortFailed.accept(this, ex);
+                        throw ex;
+                    }
                 }
                 port = null;
             }
@@ -210,6 +211,9 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         return connection.registerIOErrorListener(l);
     }
 
+    // FIXME this locking seems to be necessary because of https://github.com/Fazecast/jSerialComm/issues/372
+    private static final Object simplePortLock = new Object();
+
     /**
      * Utility method for opening the selected COM-port.
      *
@@ -219,30 +223,33 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
 
         AtomicReference<SerialPort> result = new AtomicReference<>();
 
-        Arrays.asList(SerialPort.getCommPorts()).stream().filter(p -> config.getName().equals(p.getSystemPortName()))
-                .findFirst().ifPresentOrElse((port -> {
+        getAvailablePorts().stream().filter(p -> config.getName().equals(p.getSystemPortName()))
+            .findFirst().ifPresentOrElse((port -> {
 
-            port.setComPortTimeouts(
-                    SerialPort.TIMEOUT_READ_BLOCKING|SerialPort.TIMEOUT_READ_BLOCKING
+                port.setComPortTimeouts(
+                    SerialPort.TIMEOUT_READ_BLOCKING | SerialPort.TIMEOUT_READ_BLOCKING
                     , 0/*wait until data to read is available*/, config.getWriteTimeout()
-            );
+                );
 
-            port.setComPortParameters(config.getBaudRate(),
+                port.setComPortParameters(config.getBaudRate(),
                     config.getNumberOfDataBits(),
                     config.getStopBits().getValue(),
                     config.getParityBits().getValue());
 
-            if (!port.openPort(config.getSafetyTimeout())) {
-                var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
+                synchronized (simplePortLock) {
+                    if (!port.openPort(config.getSafetyTimeout())) {
+                        var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
+                        throw ex;
+                    }
+                }
+
+                result.set(port);
+
+            }), () -> {
+                var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
                 throw ex;
-            }
+            });
 
-            result.set(port);
-
-        }), () -> {
-            var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
-            throw ex;
-        });
 
         return result.get();
 
@@ -253,12 +260,18 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         return connection.getFormat();
     }
 
+    private static List<SerialPort> getAvailablePorts() {
+        synchronized (simplePortLock) {
+            return Arrays.asList(SerialPort.getCommPorts());
+        }
+    }
+
     /**
      * Returns a list of all COM ports currently available.
      * @return a list of all COM ports currently available
      */
     public static List<String> getPortNames() {
-        return Arrays.asList(SerialPort.getCommPorts()).stream().map(p->p.getSystemPortName()).
+        return getAvailablePorts().stream().map(p->p.getSystemPortName()).
                 collect(Collectors.toList());
     }
 
