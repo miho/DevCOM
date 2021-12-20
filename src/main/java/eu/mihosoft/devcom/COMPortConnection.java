@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -183,16 +184,18 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             connection.close();
         } finally {
             if (port != null) {
-                synchronized (simplePortLock) {
+                portLock.lock();
+                try {
                     if (!port.closePort()) {
                         var ex = new RuntimeException("Could not close port: " + config.getName());
                         if (onPortFailed != null) onPortFailed.accept(this, ex);
                         throw ex;
                     }
+                } finally {
+                    portLock.unlock();
+                    port = null;
                 }
-                port = null;
             }
-
         }
     }
 
@@ -212,7 +215,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     // FIXME this locking seems to be necessary because of https://github.com/Fazecast/jSerialComm/issues/372
-    private static final Object simplePortLock = new Object();
+    private static final ReentrantLock portLock = new ReentrantLock();
 
     /**
      * Utility method for opening the selected COM-port.
@@ -236,11 +239,14 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                     config.getStopBits().getValue(),
                     config.getParityBits().getValue());
 
-                synchronized (simplePortLock) {
+                portLock.lock();
+                try {
                     if (!port.openPort(config.getSafetyTimeout())) {
                         var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
                         throw ex;
                     }
+                } finally {
+                    portLock.unlock();
                 }
 
                 result.set(port);
@@ -261,8 +267,11 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     private static List<SerialPort> getAvailablePorts() {
-        synchronized (simplePortLock) {
+        portLock.lock();
+        try {
             return Arrays.asList(SerialPort.getCommPorts());
+        } finally {
+            portLock.unlock();
         }
     }
 

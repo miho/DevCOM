@@ -120,7 +120,11 @@ public final class Device<T> implements AutoCloseable {
      */
     public CompletableFuture<Void> connectAsync(DataConnection<T, ?> connection) {
         this.connection = connection;
+
         return CompletableFuture.runAsync(()->{
+            if(isConnected()) {
+                close();
+            }
             setConnectionState(State.CONNECTING);
             try {
                 controller.init((DataConnection<T, DataConnection<T, ?>>) connection);

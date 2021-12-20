@@ -38,9 +38,9 @@ public enum PortScanner {
     private ScheduledFuture<?> f;
 
     // start this scanner automatically
-//    static {
-//        getInstance().start();
-//    }
+    static {
+        getInstance().start();
+    }
 
     /**
      * Returns the instance of this scanner.
@@ -130,9 +130,9 @@ public enum PortScanner {
                     return null;
                 }
             }
-        ).completeOnTimeout(null, 10000, TimeUnit.MILLISECONDS).handle((tcomPortConnection, throwable) -> {
+        ).completeOnTimeout(null, 100000, TimeUnit.MILLISECONDS).handle((comPortConnection, throwable) -> {
             executor.shutdown();
-            return tcomPortConnection;
+            return comPortConnection;
         }).join());
     }
 
@@ -151,23 +151,9 @@ public enum PortScanner {
 
         return PortEvent.newBuilder()
             .withTimestamp(System.currentTimeMillis())
-            .withAdded(Collections.unmodifiableList(added))
-            .withRemoved(Collections.unmodifiableList(removed))
+            .withAdded(added)
+            .withRemoved(removed)
                 .build();
-    }
-
-    /**
-     * Event type.
-     */
-    public enum EventType {
-        /**
-         * Indicated port have been added.
-         */
-        ADDED,
-        /**
-         * Indicated port have been removed.
-         */
-        REMOVED
     }
 
     /**

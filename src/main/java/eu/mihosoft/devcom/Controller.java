@@ -80,7 +80,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
                     cmd.requestCancellation();
-                    cmd.getReply().completeExceptionally(new RuntimeException("Cancelling. I/O error occurred."));
+                    cmd.getReply().completeExceptionally(new RuntimeException("Cancelling. I/O error occurred.", e1));
                 });
             replyQueue.clear();
         });

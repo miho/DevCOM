@@ -71,6 +71,8 @@ dependencies {
     implementation 'org.tinylog:tinylog-impl:2.3.2'
 
     implementation 'com.fazecast:jSerialComm:2.7.0'
+
+//    implementation fileTree(dir: 'C:/Users/miho/Downloads/', include: 'jSerialComm-2.8.0-beta4.jar')
 }
 
 jar {
