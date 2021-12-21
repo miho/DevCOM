@@ -276,12 +276,23 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     /**
-     * Returns a list of all COM ports currently available.
-     * @return a list of all COM ports currently available
+     * @return a list of all COM port names currently available
+     * Returns a list of all COM port names currently available.
      */
     public static List<String> getPortNames() {
         return getAvailablePorts().stream().map(p->p.getSystemPortName()).
                 collect(Collectors.toList());
+    }
+
+    /**
+     * Returns a list of all COM port infos currently available.
+     * @return a list of all COM port infos currently available
+     */
+    public static List<PortInfo> getPortInfos() {
+        return getAvailablePorts().stream().map(p->PortInfo.newBuilder()
+                .withName(p.getDescriptivePortName())
+                .withExtendedName(p.getSystemPortName()).build())
+                .collect(Collectors.toList());
     }
 
     @Override

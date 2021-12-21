@@ -35,6 +35,12 @@ rootProject.file("config/common.properties").withInputStream { commonProps.load(
 apply plugin: 'eu.mihosoft.vmf'
 apply from: 'gradle/publishing.gradle'
 
+// set dependencies for intellij editor (otherwise vmf dir would be ignored)
+idea.module{
+    dependencies {
+        implementation group: 'eu.mihosoft.vmf', name: 'vmf', version: project.commonProps.get("deps.vmf.version")
+    }
+}
 
 
 wrapper {
@@ -64,6 +70,8 @@ repositories {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
+
+    implementation "eu.mihosoft.vmf:vmf:${project.commonProps.get('vmf.version')}"
 
     implementation 'eu.mihosoft.binarytypeutils:binarytypeutils:0.1.3'
 
