@@ -1,7 +1,7 @@
 # DevCOM
 Protocol agnostic and concurrent device communication via I/O streams and COM ports. Developed as part of the DrawBotFX project.
 
-[![](https://jitpack.io/v/miho/DevCOM.svg)](https://jitpack.io/#miho/DevCOM)
+[![javadoc](https://javadoc.io/badge2/eu.mihosoft.devcom/devcom/javadoc.svg)](https://javadoc.io/doc/eu.mihosoft.devcom/devcom) [![](https://jitpack.io/v/miho/DevCOM.svg)](https://jitpack.io/#miho/DevCOM)
 
 ## How to use DevCOM
 
