@@ -126,7 +126,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      */
     public COMPortConnection<T> setPortConfig(PortConfig config) {
         this.config = config;
-
         return this;
     }
 
@@ -184,16 +183,19 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             connection.close();
         } finally {
             if (port != null) {
+                boolean closed;
                 portLock.lock();
                 try {
-                    if (!port.closePort()) {
-                        var ex = new RuntimeException("Could not close port: " + config.getName());
-                        if (onPortFailed != null) onPortFailed.accept(this, ex);
-                        throw ex;
-                    }
+                    closed = port.closePort();
                 } finally {
                     portLock.unlock();
                     port = null;
+                }
+
+                if (!closed) {
+                    var ex = new RuntimeException("Could not close port: " + config.getName());
+                    if (onPortFailed != null) onPortFailed.accept(this, ex);
+                    throw ex;
                 }
             }
         }

@@ -51,8 +51,8 @@ interface PortConfig extends WithName {
     @DefaultValue("false")
     boolean isRS485ModeEnabled();
 
-    @Doc("Safety timeout used after opening the port (in milliseconds).")
-    @DefaultValue("500")
+    @Doc("Safety timeout used for opening the port (in milliseconds).")
+    @DefaultValue("200")
     int getSafetyTimeout();
 
     @Doc("Write timeout (in milliseconds).")

@@ -25,7 +25,7 @@ public enum PortScanner {
     INSTANCE;
 
     // number of threads used for port discovery
-    private static final int MAX_DISCOVERY_THREADS = 16;
+    private static int MAX_DISCOVERY_THREADS = 16;
 
     // port event listeners
     private final List<Consumer<PortEvent>> listeners
@@ -54,7 +54,7 @@ public enum PortScanner {
      * Starts this port scanner with the default period.
      */
     public void start() {
-        start(100/*ms*/);
+        start(1000/*ms*/);
     }
 
     /**
@@ -72,6 +72,7 @@ public enum PortScanner {
                         l.accept(evt);
                     } catch (Exception ex) {
                         // ex.printStackTrace();
+                        org.tinylog.Logger.error(ex);
                     }
                 }
             }
@@ -85,7 +86,7 @@ public enum PortScanner {
     public boolean isRunning() {
         if(f==null) return false;
 
-        return f.isCancelled() || f.isDone();
+        return !f.isCancelled() && !f.isDone();
     }
 
     /**
