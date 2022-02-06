@@ -35,7 +35,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      * @param format the data format to use for communication
      */
     public COMPortConnection(DataFormat<T> format) {
-        this.onPortFailed = (comPortBonsaiConnection, e) -> {e.printStackTrace();};
+        this.onPortFailed = (comPortBonsaiConnection, e) -> {};
         connection = new StreamConnection<>(format);
     }
 

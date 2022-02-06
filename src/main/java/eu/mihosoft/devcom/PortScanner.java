@@ -54,7 +54,7 @@ public enum PortScanner {
      * Starts this port scanner with the default period.
      */
     public void start() {
-        start(1000/*ms*/);
+        start(500/*ms*/);
     }
 
     private ScheduledExecutorService executor;
