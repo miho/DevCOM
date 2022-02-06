@@ -65,17 +65,12 @@ public enum PortScanner {
      */
     public void start(long period) {
         stop();
-        executor = Executors.newScheduledThreadPool(MAX_DISCOVERY_THREADS);
+        executor = Executors.newScheduledThreadPool(MAX_DISCOVERY_THREADS+1);
         f = executor.scheduleAtFixedRate(()->{
             var evt = pollPorts();
             if(!evt.getAdded().isEmpty() || !evt.getRemoved().isEmpty()) {
                 for (var l : listeners) {
-                    try {
-                        l.accept(evt);
-                    } catch (Exception ex) {
-                        // ex.printStackTrace();
-                        org.tinylog.Logger.error(ex);
-                    }
+                    executor.execute(()->l.accept(evt));
                 }
             }
         }, 0, period, TimeUnit.MILLISECONDS);

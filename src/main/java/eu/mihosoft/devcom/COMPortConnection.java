@@ -262,12 +262,12 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     private static List<SerialPort> getAvailablePorts() {
-//        portLock.lock();
-//        try {
+        portLock.lock();
+        try {
             return Arrays.asList(SerialPort.getCommPorts());
-//        } finally {
-//            portLock.unlock();
-//        }
+        } finally {
+            portLock.unlock();
+        }
     }
 
     /**
