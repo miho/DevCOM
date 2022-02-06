@@ -100,3 +100,25 @@ interface PortEvent {
     @Doc("Names of ports removed since the last scan.")
     String[] getRemoved();
 }
+
+@ExternalType(pkgName = "eu.mihosoft.devcom.Device")
+interface State {
+
+}
+
+@Doc("State changed event.")
+@Immutable()
+interface StateChangedEvent {
+    @Doc("Timestamp (milliseconds since January 1st, 1970).")
+    long getTimestamp();
+
+    @Doc("Old state")
+    State getOldState();
+
+    @Doc("New state")
+    State getNewState();
+
+    Exception getException();
+
+}
+

@@ -57,14 +57,16 @@ public enum PortScanner {
         start(1000/*ms*/);
     }
 
+    private ScheduledExecutorService executor;
+
     /**
      * Starts this port scanner with the specified period.
      * @param period scanner period in milliseconds
      */
     public void start(long period) {
         stop();
-
-        f = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(()->{
+        executor = Executors.newScheduledThreadPool(MAX_DISCOVERY_THREADS);
+        f = executor.scheduleAtFixedRate(()->{
             var evt = pollPorts();
             if(!evt.getAdded().isEmpty() || !evt.getRemoved().isEmpty()) {
                 for (var l : listeners) {
@@ -97,6 +99,12 @@ public enum PortScanner {
             f.cancel(true);
             f = null;
         }
+
+        var e = executor;
+        if(e!=null) {
+            e.shutdown();
+            executor = null;
+        }
     }
 
     /**
@@ -127,7 +135,7 @@ public enum PortScanner {
                         }).collect(Collectors.toList())
                     );
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    // e.printStackTrace();
                     return null;
                 }
             }
@@ -143,6 +151,7 @@ public enum PortScanner {
      */
     private PortEvent pollPorts () {
         var currentlyAvailablePorts = COMPortConnection.getPortNames();
+
         var added = new ArrayList<String>();
         var removed = new ArrayList<String>();
         computeDiff(portList, currentlyAvailablePorts, added, removed);

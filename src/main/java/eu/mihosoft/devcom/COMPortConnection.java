@@ -178,7 +178,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      * Closes the connection to the specified port.
      */
     @Override
-    public void close() throws RuntimeException{
+    public void close() throws RuntimeException {
         try {
             connection.close();
         } finally {
@@ -224,43 +224,36 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      *
      * @return the serial port object to be used form communication
      */
-    private static SerialPort openPort(PortConfig config)  throws RuntimeException{
+    private static SerialPort openPort(PortConfig config)  throws RuntimeException {
 
-        AtomicReference<SerialPort> result = new AtomicReference<>();
+        var port = SerialPort.getCommPort(config.getName());
 
-        getAvailablePorts().stream().filter(p -> config.getName().equals(p.getSystemPortName()))
-            .findFirst().ifPresentOrElse((port -> {
+        if(port==null) {
+            var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
+            throw ex;
+        }
 
-                port.setComPortTimeouts(
-                    SerialPort.TIMEOUT_READ_BLOCKING | SerialPort.TIMEOUT_READ_BLOCKING
-                    , 0/*wait until data to read is available*/, config.getWriteTimeout()
-                );
+        port.setComPortTimeouts(
+            SerialPort.TIMEOUT_READ_BLOCKING | SerialPort.TIMEOUT_READ_BLOCKING
+            , 0/*wait until data to read is available*/, config.getWriteTimeout()
+        );
 
-                port.setComPortParameters(config.getBaudRate(),
-                    config.getNumberOfDataBits(),
-                    config.getStopBits().getValue(),
-                    config.getParityBits().getValue());
+        port.setComPortParameters(config.getBaudRate(),
+            config.getNumberOfDataBits(),
+            config.getStopBits().getValue(),
+            config.getParityBits().getValue());
 
-                portLock.lock();
-                try {
-                    if (!port.openPort(config.getSafetyTimeout())) {
-                        var ex = new RuntimeException("Cannot open port: " + port.getDescriptivePortName());
-                        throw ex;
-                    }
-                } finally {
-                    portLock.unlock();
-                }
-
-                result.set(port);
-
-            }), () -> {
-                var ex = new RuntimeException("Cannot find selected COM port: " + config.getName());
+        portLock.lock();
+        try {
+            if (!port.openPort(config.getSafetyTimeout())) {
+                var ex = new RuntimeException("Cannot open port: " + config.getName());
                 throw ex;
-            });
+            }
+        } finally {
+            portLock.unlock();
+        }
 
-
-        return result.get();
-
+        return port;
     }
 
     @Override
@@ -269,12 +262,12 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     private static List<SerialPort> getAvailablePorts() {
-        portLock.lock();
-        try {
+//        portLock.lock();
+//        try {
             return Arrays.asList(SerialPort.getCommPorts());
-        } finally {
-            portLock.unlock();
-        }
+//        } finally {
+//            portLock.unlock();
+//        }
     }
 
     /**

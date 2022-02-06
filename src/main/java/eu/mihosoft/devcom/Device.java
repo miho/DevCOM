@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * A device combines a data connection and a controller. It handles the
@@ -20,7 +21,7 @@ public final class Device<T> implements AutoCloseable {
     private final Controller<T, DataConnection<T, ?>> controller;
     private volatile DataConnection<T, ?> connection;
     private final AtomicReference<State> connectionState = new AtomicReference<>(State.DISCONNECTED);
-    private final List<BiConsumer<State,State>> stateChangedListeners = new ArrayList<>();
+    private final List<Consumer<StateChangedEvent>> stateChangedListeners = new ArrayList<>();
 
     /**
      * Connection state.
@@ -94,12 +95,15 @@ public final class Device<T> implements AutoCloseable {
         return connectionState.get() == State.CONNECTED;
     }
 
-    private void setConnectionState(State s) {
+    private void setConnectionState(State s, Exception ex) {
         var prev = connectionState.getAndSet(s);
+
+        var timestamp = System.currentTimeMillis();
 
         if(s != prev) {
             CompletableFuture.runAsync(() -> stateChangedListeners.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(prev, s))).join();
+                filter(l -> l != null).forEach(l -> l.accept(StateChangedEvent.newBuilder()
+                    .withOldState(prev).withNewState(s).withTimestamp(timestamp).withException(ex).build()))).join();
         }
     }
 
@@ -108,7 +112,7 @@ public final class Device<T> implements AutoCloseable {
      * @param l listener to register
      * @return subscription that allows to unregister the listener
      */
-    public Subscription registerOnConnectionStateChanged(BiConsumer<State, State> l) {
+    public Subscription registerOnConnectionStateChanged(Consumer<StateChangedEvent> l) {
         stateChangedListeners.add(l);
         return ()->stateChangedListeners.remove(l);
     }
@@ -125,14 +129,13 @@ public final class Device<T> implements AutoCloseable {
             if(isConnected()) {
                 close();
             }
-            setConnectionState(State.CONNECTING);
+            setConnectionState(State.CONNECTING, null);
             try {
                 controller.init((DataConnection<T, DataConnection<T, ?>>) connection);
                 connectionBehavior.accept(this, connection);
-                setConnectionState(State.CONNECTED);
+                setConnectionState(State.CONNECTED, null);
             } catch(Exception ex) {
-                ex.printStackTrace();
-                setConnectionState(State.ERROR);
+                setConnectionState(State.ERROR, ex);
             }
         });
     }
@@ -148,7 +151,7 @@ public final class Device<T> implements AutoCloseable {
      */
     public CompletableFuture<Void> closeAsync() {
         return CompletableFuture.runAsync(()->{
-            setConnectionState(State.DISCONNECTING);
+            setConnectionState(State.DISCONNECTING, null);
             try {
 
                 try (var ctrlRes = controller;
@@ -156,9 +159,9 @@ public final class Device<T> implements AutoCloseable {
                     // auto close
                 }
 
-                setConnectionState(State.DISCONNECTED);
+                setConnectionState(State.DISCONNECTED, null);
             } catch(Exception ex) {
-                setConnectionState(State.ERROR);
+                setConnectionState(State.ERROR, ex);
             }
         });
     }
