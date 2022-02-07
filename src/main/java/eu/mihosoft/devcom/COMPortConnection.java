@@ -1,7 +1,10 @@
 package eu.mihosoft.devcom;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 import com.fazecast.jSerialComm.SerialPortTimeoutException;
+import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -183,14 +186,8 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             connection.close();
         } finally {
             if (port != null) {
-                boolean closed;
-                portLock.lock();
-                try {
-                    closed = port.closePort();
-                } finally {
-                    portLock.unlock();
-                    port = null;
-                }
+                boolean closed = port.closePort();
+                port = null;
 
                 if (!closed) {
                     var ex = new RuntimeException("Could not close port: " + config.getName());
@@ -216,9 +213,6 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         return connection.registerIOErrorListener(l);
     }
 
-    // FIXME this locking seems to be necessary because of https://github.com/Fazecast/jSerialComm/issues/372
-    private static final ReentrantLock portLock = new ReentrantLock();
-
     /**
      * Utility method for opening the selected COM-port.
      *
@@ -243,14 +237,23 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             config.getStopBits().getValue(),
             config.getParityBits().getValue());
 
-        portLock.lock();
-        try {
-            if (!port.openPort(config.getSafetyTimeout())) {
-                var ex = new RuntimeException("Cannot open port: " + config.getName());
-                throw ex;
-            }
-        } finally {
-            portLock.unlock();
+        if (!port.openPort(config.getSafetyTimeout())) {
+            var ex = new RuntimeException("Cannot open port: " + config.getName());
+            throw ex;
+        } else {
+            port.addDataListener(new SerialPortDataListener() {
+                @Override
+                public int getListeningEvents() { return SerialPort.LISTENING_EVENT_PORT_DISCONNECTED; }
+                @Override
+                public void serialEvent(SerialPortEvent event)
+                {
+                    Logger.debug(
+                        "device on port '" + event.getSerialPort().getSystemPortName()
+                        + "' disconnected. closing port.");
+                    event.getSerialPort().closePort();
+                }
+            });
+            port.removeDataListener();
         }
 
         return port;
@@ -262,12 +265,8 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
     }
 
     private static List<SerialPort> getAvailablePorts() {
-        portLock.lock();
-        try {
-            return Arrays.asList(SerialPort.getCommPorts());
-        } finally {
-            portLock.unlock();
-        }
+        var ports = Arrays.asList(SerialPort.getCommPorts());
+        return ports;
     }
 
     /**
