@@ -151,14 +151,16 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             if (cmd.isReplyExpected()) {
                                 replyQueue.addLast(cmd);
                                 // ensure result is invalidated if timeout exceeded
-                                if (executor == null) executor = Executors.newCachedThreadPool();
-                                CompletableFuture.delayedExecutor(cmdTimeout, TimeUnit.MILLISECONDS, executor)
-                                    .execute(()->{
-                                    if(cmd.getReply().isDone()||cmd.getReply().isCancelled()) return;
+                                if(cmdTimeout>0) {
+                                    if (executor == null) executor = Executors.newCachedThreadPool();
+                                    CompletableFuture.delayedExecutor(cmdTimeout, TimeUnit.MILLISECONDS, executor)
+                                        .execute(() -> {
+                                            if (cmd.getReply().isDone() || cmd.getReply().isCancelled()) return;
 
-                                    cmd.getReply().completeExceptionally(new TimeoutException());
-                                    replyQueue.removeFirstOccurrence(cmd);
-                                });
+                                            cmd.getReply().completeExceptionally(new TimeoutException());
+                                            replyQueue.removeFirstOccurrence(cmd);
+                                        });
+                                }
                             } else {
                                 cmd.getReply().complete(null);
                             }
