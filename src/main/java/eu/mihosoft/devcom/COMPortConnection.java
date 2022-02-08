@@ -247,13 +247,14 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                 @Override
                 public void serialEvent(SerialPortEvent event)
                 {
+                    port.removeDataListener();
                     Logger.debug(
                         "device on port '" + event.getSerialPort().getSystemPortName()
                         + "' disconnected. closing port.");
                     event.getSerialPort().closePort();
                 }
             });
-            port.removeDataListener();
+
         }
 
         return port;
