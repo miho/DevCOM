@@ -1,10 +1,8 @@
 package eu.mihosoft.devcom;
 
-import java.io.IOException;
 import java.util.Deque;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -14,17 +12,20 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     private final Object simpleLock = new Object();
     private final Deque<Command<T>> cmdQueue = new LinkedBlockingDeque<>();
     private final Deque<Command<T>> replyQueue = new LinkedBlockingDeque<>();
+    private volatile ExecutorService cmdExecutor;
     private volatile ExecutorService executor;
     /*pkg private*/ final AtomicReference<CompletableFuture<Void>> queueTaskFuture = new AtomicReference<>();
     private volatile Thread queueThread;
     private volatile long cmdTimeout = 0/*no timeout, unit: ms*/;
+    private volatile long dataTimeout = 0/*no timeout, unit: ms*/;
     private volatile Consumer<InterruptedException> onInterrupted;
 
     /**
      * Creates a new controller instance.
      */
     public Controller() {
-        this.executor = Executors.newSingleThreadExecutor();
+        this.cmdExecutor = Executors.newSingleThreadExecutor();
+        this.executor = Executors.newCachedThreadPool();
     }
 
     /**
@@ -33,7 +34,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      */
     public Controller(Consumer<InterruptedException> onInterrupted) {
         setOnInterrupted(onInterrupted);
-        this.executor = Executors.newSingleThreadExecutor();
+        this.cmdExecutor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -43,6 +44,16 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      */
     public Controller<T,V> setCommandTimeout(long milliseconds) {
         this.cmdTimeout = milliseconds;
+        return this;
+    }
+
+    /**
+     * Sets the data timeout (until the command is sent).
+     * @param milliseconds duration in milliseconds (0 means no timeout)
+     * @return this controller
+     */
+    public Controller<T,V> setDataTimeout(long milliseconds) {
+        this.dataTimeout = milliseconds;
         return this;
     }
 
@@ -114,8 +125,8 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
                     CompletableFuture<Void> cmdFuture = new CompletableFuture<>();
                     queueTaskFuture.set(cmdFuture);
-                    if (executor == null) executor = Executors.newSingleThreadExecutor();
-                    executor.execute(() -> {
+                    if (cmdExecutor == null) cmdExecutor = Executors.newSingleThreadExecutor();
+                    cmdExecutor.execute(() -> {
                         // don't process consumed commands
                         if (cmd.isConsumed()) {
                             return;
@@ -140,7 +151,9 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             if (cmd.isReplyExpected()) {
                                 replyQueue.addLast(cmd);
                                 // ensure result is invalidated if timeout exceeded
-                                CompletableFuture.delayedExecutor(cmdTimeout, TimeUnit.MILLISECONDS).execute(()->{
+                                if (executor == null) executor = Executors.newCachedThreadPool();
+                                CompletableFuture.delayedExecutor(cmdTimeout, TimeUnit.MILLISECONDS, executor)
+                                    .execute(()->{
                                     if(cmd.getReply().isDone()||cmd.getReply().isCancelled()) return;
 
                                     cmd.getReply().completeExceptionally(new TimeoutException());
@@ -216,11 +229,21 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 queueThread = null;
             }
         } finally {
-            if(executor == null) return;
+
             try {
-                executor.shutdown();
+                if (cmdExecutor == null) return;
+                try {
+                    cmdExecutor.shutdown();
+                } finally {
+                    cmdExecutor = null;
+                }
             } finally {
-                executor = null;
+                if(executor == null) return;
+                try {
+                    executor.shutdown();
+                } finally {
+                    executor = null;
+                }
             }
 
             cmdQueue.forEach(cmd -> {
@@ -285,16 +308,30 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
             replyQueue.clear();
 
-            if(executor == null) return true;
             try {
-                if(timeout == 0) {
-                    executor.shutdownNow();
-                    return true;
-                } else {
-                    return executor.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+                if (cmdExecutor == null) return true;
+                try {
+                    if (timeout == 0) {
+                        cmdExecutor.shutdownNow();
+                        return true;
+                    } else {
+                        return cmdExecutor.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+                    }
+                } finally {
+                    cmdExecutor = null;
                 }
             } finally {
-                executor = null;
+                if (executor == null) return true;
+                try {
+                    if (timeout == 0) {
+                        executor.shutdownNow();
+                        return true;
+                    } else {
+                        return executor.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+                    }
+                } finally {
+                    executor = null;
+                }
             }
         }
     }
@@ -351,7 +388,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      */
     public T sendCommand(T msg) {
         try {
-            return sendCommandAsync(msg).getReply().get(1000, TimeUnit.MILLISECONDS);
+            if(cmdTimeout>0) {
+                return sendCommandAsync(msg).getReply().get(cmdTimeout, TimeUnit.MILLISECONDS);
+            } else {
+                return sendCommandAsync(msg).getReply().get();
+            }
         } catch (InterruptedException | ExecutionException|TimeoutException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
             org.tinylog.Logger.debug(e);
@@ -386,7 +427,11 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             sentF.completeExceptionally(e);
         },null));
         try {
-            sentF.get(1000, TimeUnit.MILLISECONDS);
+            if(dataTimeout>0) {
+                sentF.get(dataTimeout, TimeUnit.MILLISECONDS);
+            } else {
+                sentF.get();
+            }
         } catch (InterruptedException | ExecutionException|TimeoutException e) {
             var ex = new RuntimeException("Data cannot be sent", e);
             throw ex;
