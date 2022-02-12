@@ -69,6 +69,14 @@ interface PortInfo extends WithName, WithExtendedName{
     @Doc("The extended port name, e.g., 'COM3 - Arduino UNO'")
     @DefaultValue("\"\"")
     String getExtendedName();
+
+    @Doc("The port description. Some devices add the serial number (e.g. FTDI chips).")
+    @DefaultValue("\"\"")
+    String getDescription();
+
+    @Doc("The port location.")
+    @DefaultValue("\"\"")
+    String getLocation();
 }
 
 @Doc("Denotes a device accessed with this library")

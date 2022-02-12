@@ -285,8 +285,10 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      */
     public static List<PortInfo> getPortInfos() {
         return getAvailablePorts().stream().map(p->PortInfo.newBuilder()
-                .withName(p.getDescriptivePortName())
-                .withExtendedName(p.getSystemPortName()).build())
+                .withName(p.getSystemPortName())
+                .withDescription(p.getPortDescription())
+                .withLocation(p.getPortLocation())
+                .withExtendedName(p.getDescriptivePortName()).build())
                 .collect(Collectors.toList());
     }
 
