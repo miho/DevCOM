@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -21,6 +22,7 @@ public final class Device<T> implements AutoCloseable {
     private final Controller<T, DataConnection<T, ?>> controller;
     private volatile DataConnection<T, ?> connection;
     private final AtomicReference<State> connectionState = new AtomicReference<>(State.DISCONNECTED);
+    private final ReentrantLock stateChangedListenersLock = new ReentrantLock();
     private final List<Consumer<StateChangedEvent>> stateChangedListeners = new ArrayList<>();
 
     /**
@@ -100,10 +102,16 @@ public final class Device<T> implements AutoCloseable {
 
         var timestamp = System.currentTimeMillis();
 
-        if(s != prev) {
-            CompletableFuture.runAsync(() -> stateChangedListeners.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(StateChangedEvent.newBuilder()
-                    .withOldState(prev).withNewState(s).withTimestamp(timestamp).withException(ex).build()))).join();
+        stateChangedListenersLock.lock();
+        var listenersToNotify = new ArrayList<>(stateChangedListeners);
+        try {
+            if (s != prev) {
+                CompletableFuture.runAsync(() -> listenersToNotify.parallelStream().
+                    filter(l -> l != null).forEach(l -> l.accept(StateChangedEvent.newBuilder()
+                        .withOldState(prev).withNewState(s).withTimestamp(timestamp).withException(ex).build()))).join();
+            }
+        } finally {
+            stateChangedListenersLock.unlock();
         }
     }
 
@@ -113,8 +121,20 @@ public final class Device<T> implements AutoCloseable {
      * @return subscription that allows to unregister the listener
      */
     public Subscription registerOnConnectionStateChanged(Consumer<StateChangedEvent> l) {
-        stateChangedListeners.add(l);
-        return ()->stateChangedListeners.remove(l);
+        stateChangedListenersLock.lock();
+        try {
+            stateChangedListeners.add(l);
+        } finally {
+            stateChangedListenersLock.unlock();
+        }
+        return ()->{
+            stateChangedListenersLock.lock();
+            try {
+                stateChangedListeners.remove(l);
+            } finally {
+                stateChangedListenersLock.unlock();
+            }
+        };
     }
 
     /**
