@@ -68,14 +68,17 @@ interface PortInfo extends WithName, WithExtendedName{
 
     @Doc("The extended port name, e.g., 'COM3 - Arduino UNO'")
     @DefaultValue("\"\"")
+    @IgnoreEquals
     String getExtendedName();
 
     @Doc("The port description. Some devices add the serial number (e.g. FTDI chips).")
     @DefaultValue("\"\"")
+    @IgnoreEquals
     String getDescription();
 
     @Doc("The port location.")
     @DefaultValue("\"\"")
+    @IgnoreEquals
     String getLocation();
 }
 
@@ -102,11 +105,11 @@ interface PortEvent {
     @Doc("Timestamp (milliseconds since January 1st, 1970).")
     long getTimestamp();
 
-    @Doc("Names of ports added since the last scan.")
-    String[] getAdded();
+    @Doc("port infos of ports added since the last scan.")
+    PortInfo[] getAdded();
 
-    @Doc("Names of ports removed since the last scan.")
-    String[] getRemoved();
+    @Doc("port infos of ports removed since the last scan.")
+    PortInfo[] getRemoved();
 }
 
 @ExternalType(pkgName = "eu.mihosoft.devcom.Device")

@@ -6,6 +6,7 @@ import vjavax.observer.Subscription;
 import java.util.*;
 import java.util.concurrent.*;
 
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,7 +33,9 @@ public enum PortScanner {
         = new ArrayList<>();
 
     // list of discovered ports
-    private final List<String> portList = new ArrayList<>();
+    private final List<PortInfo> portList = new ArrayList<>();
+
+    private final ReentrantLock portListenerLock = new ReentrantLock();
 
     // future used to cancel periodic scanning
     private ScheduledFuture<?> f;
@@ -69,8 +72,21 @@ public enum PortScanner {
         f = executor.scheduleAtFixedRate(()->{
             var evt = pollPorts();
             if(!evt.getAdded().isEmpty() || !evt.getRemoved().isEmpty()) {
-                for (var l : listeners) {
-                    executor.execute(()->l.accept(evt));
+                portListenerLock.lock();
+                try {
+                    var listenersToNotify = new ArrayList<>(listeners);
+                    for (var l : listenersToNotify) {
+                        executor.execute(() -> {
+                            portListenerLock.lock();
+                            try {
+                                l.accept(evt);
+                            } finally {
+                                portListenerLock.unlock();
+                            }
+                        });
+                    }
+                } finally {
+                    portListenerLock.unlock();
                 }
             }
         }, 0, period, TimeUnit.MILLISECONDS);
@@ -145,10 +161,10 @@ public enum PortScanner {
      * @return event that describes which ports have been added or removed since last calling this method
      */
     private PortEvent pollPorts () {
-        var currentlyAvailablePorts = COMPortConnection.getPortNames();
+        var currentlyAvailablePorts = COMPortConnection.getPortInfos();
 
-        var added = new ArrayList<String>();
-        var removed = new ArrayList<String>();
+        var added = new ArrayList<PortInfo>();
+        var removed = new ArrayList<PortInfo>();
         computeDiff(portList, currentlyAvailablePorts, added, removed);
 
         portList.addAll(added);
@@ -202,10 +218,20 @@ public enum PortScanner {
      * @return a subscription that can be used to unsubscribe the specified listener from this port scanner
      */
     public Subscription addPortListener(Consumer<PortEvent> consumer) {
-        listeners.add(consumer);
+        portListenerLock.lock();
+        try {
+            listeners.add(consumer);
+        } finally {
+            portListenerLock.unlock();
+        }
 
         return () -> {
-            listeners.remove(consumer);
+            portListenerLock.lock();
+            try {
+                listeners.remove(consumer);
+            } finally {
+                portListenerLock.unlock();
+            }
         };
     }
 
