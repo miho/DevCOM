@@ -61,6 +61,7 @@ interface PortConfig extends WithName {
 }
 
 @Immutable
+@VMFEquals
 interface PortInfo extends WithName, WithExtendedName{
     @Doc("The port name used to identify the port, e.g. 'COM3'.")
     @DefaultValue("\"COM0\"")

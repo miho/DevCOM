@@ -9,6 +9,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -121,16 +122,17 @@ public enum PortScanner {
     /**
      * Returns a port that can successfully be connected to according to the specified
      * try-connect function.
-     * @param portNames list of port names
+     * @param portNames list of port names/infos
      * @param connectionProvider connection provider
      * @param tryConnect function that attempts to connect to the specified port
+     * @param timeout timeout in ms
      * @param <T> data type used for communication (e.g., java.lang.String or a custom packet format)
      * @return optional COM-port connection if a port that can be connected to could be found
      */
     public static <T> Optional<COMPortConnection<T>> findPort(
-        List<String> portNames,
-        Function<String, COMPortConnection<T>> connectionProvider,
-        Function<COMPortConnection<T>, Boolean> tryConnect) {
+        List<PortInfo> portNames,
+        Function<PortInfo, COMPortConnection<T>> connectionProvider,
+        Function<COMPortConnection<T>, Boolean> tryConnect, long timeout) {
         var executor = Executors.newFixedThreadPool(Math.min(portNames.size(), MAX_DISCOVERY_THREADS));
         return Optional.ofNullable(CompletableFuture.supplyAsync(
             () -> {
@@ -150,10 +152,26 @@ public enum PortScanner {
                     return null;
                 }
             }
-        ).completeOnTimeout(null, 100000, TimeUnit.MILLISECONDS).handle((comPortConnection, throwable) -> {
+        ).completeOnTimeout(null, timeout, TimeUnit.MILLISECONDS).handle((comPortConnection, throwable) -> {
             executor.shutdown();
             return comPortConnection;
         }).join());
+    }
+
+    /**
+     * Returns a port that can successfully be connected to according to the specified
+     * try-connect function.
+     * @param portNames list of port names/infos
+     * @param connectionProvider connection provider
+     * @param tryConnect function that attempts to connect to the specified port
+     * @param <T> data type used for communication (e.g., java.lang.String or a custom packet format)
+     * @return optional COM-port connection if a port that can be connected to could be found
+     */
+    public static <T> Optional<COMPortConnection<T>> findPort(
+        List<PortInfo> portNames,
+        Function<PortInfo, COMPortConnection<T>> connectionProvider,
+        Function<COMPortConnection<T>, Boolean> tryConnect) {
+        return findPort(portNames, connectionProvider, tryConnect, 10_000/*ms*/);
     }
 
     /**
