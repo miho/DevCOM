@@ -19,14 +19,11 @@ buildscript {
 }
 
 plugins {
+    id 'java-library'
     id 'com.github.hierynomus.license' version '0.16.1'
     id 'maven-publish'
     id 'net.nemerosa.versioning' version '2.7.1'
     id 'com.github.ben-manes.versions' version '0.13.0'
-}
-
-plugins {
-    id 'java-library'
 }
 
 ext.commonProps = new Properties()
@@ -44,7 +41,7 @@ idea.module{
 
 
 wrapper {
-    gradleVersion = '7.3'
+    gradleVersion = '7.4.2'
 }
 
 sourceCompatibility = '11'
