@@ -254,6 +254,8 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
             , 0/*wait until data to read is available*/, config.getWriteTimeout()
         );
 
+        port.flushIOBuffers();
+
         port.setComPortParameters(config.getBaudRate(),
             config.getNumberOfDataBits(),
             config.getStopBits().getValue(),
