@@ -171,7 +171,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         }
 
         try {
-            this.port = openPort(config);
+            this.port = openPort(config, connection::close);
             var inputStream = port.getInputStream();
             var outputStream = port.getOutputStream();
             connection.open(inputStream, outputStream);
@@ -240,7 +240,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      *
      * @return the serial port object to be used form communication
      */
-    private static SerialPort openPort(PortConfig config)  throws RuntimeException {
+    private static SerialPort openPort(PortConfig config, Runnable onCloseOperation)  throws RuntimeException {
 
         var port = SerialPort.getCommPort(config.getName());
 
@@ -269,11 +269,23 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                 @Override
                 public void serialEvent(SerialPortEvent event)
                 {
-                    port.removeDataListener();
-                    Logger.debug(
-                        "device on port '" + event.getSerialPort().getSystemPortName()
-                        + "' disconnected. closing port.");
-                    event.getSerialPort().closePort();
+                    try {
+                        if (onCloseOperation != null) {
+                            Logger.debug(
+                                "closing port '" + event.getSerialPort().getSystemPortName()
+                                    + "' because of event: " + event.getEventType());
+                            onCloseOperation.run();
+                            Logger.debug(
+                                "closed port '" + event.getSerialPort().getSystemPortName()
+                                    + "' because of event: " + event.getEventType());
+                        }
+                    } finally {
+                        port.removeDataListener();
+                        Logger.info(
+                            "device on port '" + event.getSerialPort().getSystemPortName()
+                                + "' disconnected. closing port.");
+                        event.getSerialPort().closePort();
+                    }
                 }
             });
 
