@@ -77,6 +77,8 @@ dependencies {
 
     api 'com.fazecast:jSerialComm:2.9.2'
 
+    api "eu.mihosoft.vmf:vmf-runtime:${project.commonProps.get('vmf.version')}"
+
 //    implementation fileTree(dir: 'C:/Users/miho/Downloads/', include: 'jSerialComm-2.8.0-beta4.jar')
 }
 
