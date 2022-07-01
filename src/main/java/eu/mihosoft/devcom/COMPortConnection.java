@@ -273,13 +273,13 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                 {
                     try {
                         if (onCloseOperation != null) {
-                            Logger.debug(
+                            Logger.info(
                                 "closing port '" + event.getSerialPort().getSystemPortName()
-                                    + "' because of event: " + event.getEventType());
+                                    + "' (custom callback) because of event: " + event.getEventType());
                             onCloseOperation.run();
-                            Logger.debug(
+                            Logger.info(
                                 "closed port '" + event.getSerialPort().getSystemPortName()
-                                    + "' because of event: " + event.getEventType());
+                                    + "' (custom callback) because of event: " + event.getEventType());
                         }
                     } finally {
                         port.removeDataListener();

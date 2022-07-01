@@ -22,6 +22,8 @@
  */
 package eu.mihosoft.devcom;
 
+import org.tinylog.Logger;
+
 import java.util.Deque;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -109,6 +111,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         dataConnection.setOnDataReceived(onDataReceived);
 
         dataConnection.setOnIOError((conn, e1) -> {
+            Logger.debug("cancelling " + replyQueue.size() + " commands due to i/o-error event");
             // find first element that matches reply
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
@@ -120,8 +123,10 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
 
         dataConnection.setOnConnectionClosed(o -> {
+            Logger.debug("cancelling " + replyQueue.size() + " commands due to connection-closed event");
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
+
                     cmd.requestCancellation();
                     cmd.getReply().completeExceptionally(new RuntimeException("Cancelling. Connection closed."));
                 });
