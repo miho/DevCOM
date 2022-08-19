@@ -162,18 +162,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                             cmd.getReply().completeExceptionally(
                                 new RuntimeException("Command '" + cmd + "' cancelled.")
                             );
-                            var onCancel = cmd.getOnHandleCancellationRequest();
-                            if (onCancel != null) {
-                                try {
-                                    onCancel.accept("Cancellation requested via cmd");
-                                } catch (Exception ex) {
-                                    if (cmd.getOnError() != null) {
-                                        cmd.getOnError().accept(cmd.getData(), ex);
-                                    } else {
-                                        org.tinylog.Logger.debug(ex, "Cannot send command: {}", cmd.getData());
-                                    }
-                                }
-                            }
+                            cancelCmd(cmd);
                         } else {
                             if (cmd.isReplyExpected()) {
                                 replyQueue.addLast(cmd);
@@ -205,8 +194,13 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                                     }
                                 }
                             } catch (Exception e) {
+                                // cmd identity important to find the command in the reply queue
+                                // thus, we shouldn't allow cmd.reset() without ensuring that the
+                                // cmd is not in the reply queue. For now, we deprecate the reset()
+                                // method.
                                 replyQueue.remove(cmd);
                                 cmdFuture.completeExceptionally(e);
+                                cancelCmd(cmd);
                                 if (cmd.isReplyExpected()) cmd.getReply().completeExceptionally(e);
                                 if (cmd.getOnError() != null) {
                                     try {
@@ -245,6 +239,21 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             }
         });
         queueThread.start();
+    }
+
+    private void cancelCmd(Command<T> cmd) {
+        var onCancel = cmd.getOnHandleCancellationRequest();
+        if (onCancel != null) {
+            try {
+                onCancel.accept("Cancellation requested via cmd");
+            } catch (Exception ex) {
+                if (cmd.getOnError() != null) {
+                    cmd.getOnError().accept(cmd.getData(), ex);
+                } else {
+                    Logger.debug(ex, "Cannot send command: {}", cmd.getData());
+                }
+            }
+        }
     }
 
     /**
