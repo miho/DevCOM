@@ -57,7 +57,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private final ReentrantLock dataListenersLock = new ReentrantLock();
     private final ReentrantLock sequentialEventExecutorLock = new ReentrantLock();
 
-    private ExecutorService sequentialEventExecutor;
+    private volatile ExecutorService sequentialEventExecutor;
     private final ExecutorService listenerExecutor = Executors.newCachedThreadPool();
 
     private Consumer<DataConnection<T, ?>> onConnectionClosed;
@@ -212,14 +212,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         return this;
     }
 
-    private ExecutorService getSequentialEventExecutor() {
-        sequentialEventExecutorLock.lock();
-        try {
-            return sequentialEventExecutor;
-        } finally {
-            sequentialEventExecutorLock.unlock();
-        }
-    }
+
 
     /**
      * Opens the specified port and connects to it.
@@ -242,7 +235,6 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         }
 
         restartSequentialExecutor();
-
 
         receiveThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted() && isOpen()) {
@@ -284,9 +276,23 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     }
 
     private void stopSequentialExecutorIfRunning() {
-        if(sequentialEventExecutor !=null) {
-            sequentialEventExecutor.shutdown();
-            sequentialEventExecutor = null;
+        sequentialEventExecutorLock.lock();
+        try {
+            if (sequentialEventExecutor != null) {
+                sequentialEventExecutor.shutdownNow();
+                sequentialEventExecutor = null;
+            }
+        } finally {
+            sequentialEventExecutorLock.unlock();
+        }
+    }
+
+    private ExecutorService getSequentialEventExecutor() {
+        sequentialEventExecutorLock.lock();
+        try {
+            return sequentialEventExecutor;
+        } finally {
+            sequentialEventExecutorLock.unlock();
         }
     }
 
