@@ -234,7 +234,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
             receiveThread = null;
         }
 
-        restartSequentialExecutor();
+        stopSequentialExecutorIfRunning();
 
         receiveThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted() && isOpen()) {
@@ -265,16 +265,6 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         if (onConnectionOpened != null) onConnectionOpened.accept(this);
     }
 
-    private void restartSequentialExecutor() {
-        sequentialEventExecutorLock.lock();
-        try {
-            stopSequentialExecutorIfRunning();
-            sequentialEventExecutor = Executors.newSingleThreadExecutor();
-        } finally {
-            sequentialEventExecutorLock.unlock();
-        }
-    }
-
     private void stopSequentialExecutorIfRunning() {
         sequentialEventExecutorLock.lock();
         try {
@@ -290,6 +280,11 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private ExecutorService getSequentialEventExecutor() {
         sequentialEventExecutorLock.lock();
         try {
+
+            if(sequentialEventExecutor == null) {
+                sequentialEventExecutor = Executors.newSingleThreadExecutor();
+            }
+
             return sequentialEventExecutor;
         } finally {
             sequentialEventExecutorLock.unlock();
