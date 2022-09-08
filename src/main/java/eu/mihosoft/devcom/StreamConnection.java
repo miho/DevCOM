@@ -22,21 +22,16 @@
  */
 package eu.mihosoft.devcom;
 
-import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortTimeoutException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Stream connection for reading and writing data from/to io streams.
@@ -61,6 +56,9 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private final ReentrantLock closeListenersLock = new ReentrantLock();
     private final ReentrantLock ioErrorListenersLock = new ReentrantLock();
     private final ReentrantLock dataListenersLock = new ReentrantLock();
+
+    private ExecutorService sequentialEventExecutor;
+    private final ExecutorService listenerExecutor = Executors.newCachedThreadPool();
 
     private Consumer<DataConnection<T, ?>> onConnectionClosed;
 
@@ -234,6 +232,10 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
             receiveThread = null;
         }
 
+        stopExecutorIfRunning();
+
+        sequentialEventExecutor = Executors.newSingleThreadExecutor();
+
         receiveThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted() && isOpen()) {
 
@@ -243,7 +245,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                     notifyDataListeners(p);
 
                     if (onDataReceived != null) {
-                        CompletableFuture.runAsync(()->onDataReceived.accept(p));
+                        sequentialEventExecutor.submit(() -> onDataReceived.accept(p));
                     }
                 } catch (IOException | RuntimeException e) {
 
@@ -261,6 +263,13 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         this.open = true;
         notifyOpenConnectionListeners();
         if (onConnectionOpened != null) onConnectionOpened.accept(this);
+    }
+
+    private void stopExecutorIfRunning() {
+        if(sequentialEventExecutor !=null) {
+            sequentialEventExecutor.shutdown();
+            sequentialEventExecutor = null;
+        }
     }
 
     @Override
@@ -320,15 +329,24 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
         notifyCloseConnectionListeners();
 
+        stopExecutorIfRunning();
+
         if (onConnectionClosed != null) onConnectionClosed.accept(this);
     }
+
+
 
     private void notifyIOListeners(Exception e) {
         ioErrorListenersLock.lock();
         try {
             var listenersToNotify = new ArrayList<>(ioErrorListeners);
-            CompletableFuture.runAsync(() -> listenersToNotify.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this, e)));
+
+            sequentialEventExecutor.submit(() -> {
+                for (var l : listenersToNotify) {
+                    if(l == null) return;
+                    listenerExecutor.submit(() -> l.accept(StreamConnection.this, e));
+                }
+            });
         } finally {
             ioErrorListenersLock.unlock();
         }
@@ -338,8 +356,14 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         openListenersLock.lock();
         try {
             var listenersToNotify = new ArrayList<>(openListeners);
-            CompletableFuture.runAsync(() -> listenersToNotify.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this)));
+
+            sequentialEventExecutor.submit(() -> {
+                for (var l : listenersToNotify) {
+                    if(l == null) return;
+                    listenerExecutor.submit(() -> l.accept(StreamConnection.this));
+                }
+            });
+
         } finally {
             openListenersLock.unlock();
         }
@@ -349,8 +373,13 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         closeListenersLock.lock();
         try {
             var listenersToNotify = new ArrayList<>(closeListeners);
-            CompletableFuture.runAsync(()->listenersToNotify.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(StreamConnection.this)));
+
+            sequentialEventExecutor.submit(() -> {
+                for (var l : listenersToNotify) {
+                    if(l == null) return;
+                    listenerExecutor.submit(() -> l.accept(StreamConnection.this));
+                }
+            });
         } finally {
             closeListenersLock.unlock();
         }
@@ -360,8 +389,14 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         dataListenersLock.lock();
         try {
             var listenersToNotify = new ArrayList<>(dataListeners);
-            CompletableFuture.runAsync(() -> listenersToNotify.parallelStream().
-                filter(l -> l != null).forEach(l -> l.accept(p)));
+
+            sequentialEventExecutor.submit(() -> {
+                for (var l : listenersToNotify) {
+                    if(l == null) return;
+                    listenerExecutor.submit(() -> l.accept(p));
+                }
+            });
+
         } finally {
             dataListenersLock.unlock();
         }
