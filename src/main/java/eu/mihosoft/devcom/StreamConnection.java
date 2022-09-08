@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -56,6 +55,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
     private final ReentrantLock closeListenersLock = new ReentrantLock();
     private final ReentrantLock ioErrorListenersLock = new ReentrantLock();
     private final ReentrantLock dataListenersLock = new ReentrantLock();
+    private final ReentrantLock sequentialEventExecutorLock = new ReentrantLock();
 
     private ExecutorService sequentialEventExecutor;
     private final ExecutorService listenerExecutor = Executors.newCachedThreadPool();
@@ -212,6 +212,15 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         return this;
     }
 
+    private ExecutorService getSequentialEventExecutor() {
+        sequentialEventExecutorLock.lock();
+        try {
+            return sequentialEventExecutor;
+        } finally {
+            sequentialEventExecutorLock.unlock();
+        }
+    }
+
     /**
      * Opens the specified port and connects to it.
      */
@@ -232,9 +241,8 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
             receiveThread = null;
         }
 
-        stopExecutorIfRunning();
+        restartSequentialExecutor();
 
-        sequentialEventExecutor = Executors.newSingleThreadExecutor();
 
         receiveThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted() && isOpen()) {
@@ -245,7 +253,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                     notifyDataListeners(p);
 
                     if (onDataReceived != null) {
-                        sequentialEventExecutor.submit(() -> onDataReceived.accept(p));
+                        getSequentialEventExecutor().submit(() -> onDataReceived.accept(p));
                     }
                 } catch (IOException | RuntimeException e) {
 
@@ -265,7 +273,17 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         if (onConnectionOpened != null) onConnectionOpened.accept(this);
     }
 
-    private void stopExecutorIfRunning() {
+    private void restartSequentialExecutor() {
+        sequentialEventExecutorLock.lock();
+        try {
+            stopSequentialExecutorIfRunning();
+            sequentialEventExecutor = Executors.newSingleThreadExecutor();
+        } finally {
+            sequentialEventExecutorLock.unlock();
+        }
+    }
+
+    private void stopSequentialExecutorIfRunning() {
         if(sequentialEventExecutor !=null) {
             sequentialEventExecutor.shutdown();
             sequentialEventExecutor = null;
@@ -329,7 +347,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
         notifyCloseConnectionListeners();
 
-        stopExecutorIfRunning();
+        stopSequentialExecutorIfRunning();
 
         if (onConnectionClosed != null) onConnectionClosed.accept(this);
     }
@@ -341,11 +359,12 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         try {
             var listenersToNotify = new ArrayList<>(ioErrorListeners);
 
-            sequentialEventExecutor.submit(() -> {
-                for (var l : listenersToNotify) {
-                    if(l == null) return;
-                    listenerExecutor.submit(() -> l.accept(StreamConnection.this, e));
-                }
+            getSequentialEventExecutor().submit(() -> {
+                CompletableFuture.allOf(listenersToNotify.stream()
+                        .filter(l->l!=null)
+                        .map(l -> CompletableFuture.runAsync(() -> l.accept(this, e), listenerExecutor))
+                        .toArray(CompletableFuture[]::new))
+                    .join();
             });
         } finally {
             ioErrorListenersLock.unlock();
@@ -357,11 +376,13 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         try {
             var listenersToNotify = new ArrayList<>(openListeners);
 
-            sequentialEventExecutor.submit(() -> {
-                for (var l : listenersToNotify) {
-                    if(l == null) return;
-                    listenerExecutor.submit(() -> l.accept(StreamConnection.this));
-                }
+            getSequentialEventExecutor().submit(() -> {
+                // TODO
+                CompletableFuture.allOf(listenersToNotify.stream()
+                        .filter(l->l!=null)
+                        .map(l -> CompletableFuture.runAsync(() -> l.accept(this), listenerExecutor))
+                        .toArray(CompletableFuture[]::new))
+                    .join();
             });
 
         } finally {
@@ -374,11 +395,12 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         try {
             var listenersToNotify = new ArrayList<>(closeListeners);
 
-            sequentialEventExecutor.submit(() -> {
-                for (var l : listenersToNotify) {
-                    if(l == null) return;
-                    listenerExecutor.submit(() -> l.accept(StreamConnection.this));
-                }
+            getSequentialEventExecutor().submit(() -> {
+                CompletableFuture.allOf(listenersToNotify.stream()
+                        .filter(l->l!=null)
+                        .map(l -> CompletableFuture.runAsync(() -> l.accept(this), listenerExecutor))
+                        .toArray(CompletableFuture[]::new))
+                    .join();
             });
         } finally {
             closeListenersLock.unlock();
@@ -390,11 +412,12 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
         try {
             var listenersToNotify = new ArrayList<>(dataListeners);
 
-            sequentialEventExecutor.submit(() -> {
-                for (var l : listenersToNotify) {
-                    if(l == null) return;
-                    listenerExecutor.submit(() -> l.accept(p));
-                }
+            getSequentialEventExecutor().submit(() -> {
+                CompletableFuture.allOf(listenersToNotify.stream()
+                        .filter(l->l!=null)
+                        .map(l -> CompletableFuture.runAsync(() -> l.accept(p), listenerExecutor))
+                        .toArray(CompletableFuture[]::new))
+                    .join();
             });
 
         } finally {
