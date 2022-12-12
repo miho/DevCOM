@@ -36,6 +36,8 @@ import java.util.function.Consumer;
  * Stream connection for reading and writing data from/to io streams.
  */
 public final class StreamConnection<T> implements DataConnection<T, StreamConnection<T>> {
+    private final static String TAG = "eu.mihosoft.devcom";
+
     // task to be executed if the selected connection has been successfully opened
     private Consumer<StreamConnection<T>> onConnectionOpened;
     // task to be executed if the communication with the selected streams failed
@@ -254,7 +256,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
                     if (onIOError != null) {
                         onIOError.accept(this, e);
                     } else {
-                        org.tinylog.Logger.debug(e);
+                        org.tinylog.Logger.tag(TAG).error(e);
                     }
                 }
             }

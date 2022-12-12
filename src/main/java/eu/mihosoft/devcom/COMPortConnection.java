@@ -45,6 +45,8 @@ import java.util.stream.Collectors;
  * COM port connection for reading and writing data from and to a COM port.
  */
 public final class COMPortConnection<T> implements DataConnection<T, COMPortConnection<T>> {
+
+    private final static String TAG = "eu.mihosoft.devcom:connection";
     // COM-port config
     private PortConfig config;
     // task to be executed if the communication with the selected COM-port failed
@@ -273,17 +275,17 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
                 {
                     try {
                         if (onCloseOperation != null) {
-                            Logger.debug(
+                            Logger.tag(TAG).debug(
                                 "closing port '" + event.getSerialPort().getSystemPortName()
                                     + "' (custom callback) because of event: " + event.getEventType());
                             onCloseOperation.run();
-                            Logger.debug(
+                            Logger.tag(TAG).debug(
                                 "closed port '" + event.getSerialPort().getSystemPortName()
                                     + "' (custom callback) because of event: " + event.getEventType());
                         }
                     } finally {
                         port.removeDataListener();
-                        Logger.debug(
+                        Logger.tag(TAG).debug(
                             "device on port '" + event.getSerialPort().getSystemPortName()
                                 + "' disconnected. closing port.");
                         event.getSerialPort().closePort();

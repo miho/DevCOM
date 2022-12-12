@@ -33,6 +33,7 @@ import java.util.function.Consumer;
  * A device controller for concurrent communication, e.g., via (virtual) COM ports.
  */
 public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseable {
+    private final static String TAG = "eu.mihosoft.devcom:controller";
     private final Object simpleLock = new Object();
     private final Deque<Command<T>> cmdQueue = new LinkedBlockingDeque<>();
     private final Deque<Command<T>> replyQueue = new LinkedBlockingDeque<>();
@@ -111,7 +112,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
         dataConnection.setOnDataReceived(onDataReceived);
 
         dataConnection.setOnIOError((conn, e1) -> {
-            Logger.debug("cancelling " + replyQueue.size() + " commands due to i/o-error event");
+            Logger.tag(TAG).warn("cancelling " + replyQueue.size() + " commands due to i/o-error event");
             // find first element that matches reply
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
@@ -123,7 +124,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
 
 
         dataConnection.setOnConnectionClosed(o -> {
-            Logger.debug("cancelling " + replyQueue.size() + " commands due to connection-closed event");
+            Logger.tag(TAG).warn("cancelling " + replyQueue.size() + " commands due to connection-closed event");
             replyQueue.stream().filter(cmd->cmd!=null).
                 forEach(cmd->{
 
@@ -250,7 +251,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 if (cmd.getOnError() != null) {
                     cmd.getOnError().accept(cmd.getData(), ex);
                 } else {
-                    Logger.debug(ex, "Cannot send command: {}", cmd.getData());
+                    Logger.tag(TAG).error(ex, "Cannot send command: {}", cmd.getData());
                 }
             }
         }
@@ -288,7 +289,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 try {
                     cmd.requestCancellation();
                 } catch (Exception ex) {
-                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                    org.tinylog.Logger.tag(TAG).error(ex, "Command cancellation error");
                 }
             });
 
@@ -301,7 +302,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                         new RuntimeException("Cancellation requested. Controller shutdown.")
                     );
                 } catch (Exception ex) {
-                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                    org.tinylog.Logger.tag(TAG).error(ex, "Command cancellation error");
                 }
             });
 
@@ -327,7 +328,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                 try {
                     cmd.requestCancellation();
                 } catch (Exception ex) {
-                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                    org.tinylog.Logger.tag(TAG).error(ex, "Command cancellation error");
                 }
             });
 
@@ -340,7 +341,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
                         new RuntimeException("Cancellation requested. Controller shutdown.")
                     );
                 } catch (Exception ex) {
-                    org.tinylog.Logger.debug(ex, "Command cancellation error");
+                    org.tinylog.Logger.tag(TAG).error(ex, "Command cancellation error");
                 }
             });
 
@@ -412,7 +413,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
     public Command<T> sendCommandAsync(T msg) {
         var command = new Command<T>(msg, null, null,null, (m, e)-> {
             String eMsg = "Cannot send command: " + m;
-            org.tinylog.Logger.debug(e, eMsg);
+            org.tinylog.Logger.tag(TAG).error(e, eMsg);
             throw new RuntimeException(eMsg, e);
         }, null);
         sendCommandAsync(command);
@@ -433,7 +434,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
             }
         } catch (InterruptedException | ExecutionException|TimeoutException e) {
             var ex = new RuntimeException("Reply cannot be received", e);
-            org.tinylog.Logger.debug(e);
+            org.tinylog.Logger.tag(TAG).error(e);
             throw ex;
         }
     }
