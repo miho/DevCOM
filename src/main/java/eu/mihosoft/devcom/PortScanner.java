@@ -218,11 +218,11 @@ public enum PortScanner {
     }
 
     /**
-     * Event esception that contains a list of causing exceptions during port scanning.
+     * Event exception that contains a list of causing exceptions during port scanning.
      */
     public static class EventException extends RuntimeException {
         private final List<Exception> exceptions = new ArrayList<>();
-        private List<Exception> unmodifiableExceptions = Collections.unmodifiableList(exceptions);
+        private final List<Exception> unmodifiableExceptions = Collections.unmodifiableList(exceptions);
 
         /**
          * Returns a list of causing exceptions.
