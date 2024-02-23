@@ -64,6 +64,17 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
     private Consumer<DataConnection<T, ?>> onConnectionClosed;
 
+    private long portCloseTimeout = 3000; // ms
+
+    public long getPortCloseTimeout() {
+        return portCloseTimeout;
+    }
+
+    public StreamConnection<T> setPortCloseTimeout(long portCloseTimeout) {
+        this.portCloseTimeout = portCloseTimeout;
+        return this;
+    }
+
     /**
      * Creates a new connection instance.
      *
@@ -328,7 +339,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
             receiveThread.interrupt();
 
             try {
-                receiveThread.join(3000);
+                receiveThread.join(getPortCloseTimeout());
             } catch (InterruptedException e) {
                receiveThread.interrupt();
             }

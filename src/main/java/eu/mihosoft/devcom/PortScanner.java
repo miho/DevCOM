@@ -49,7 +49,7 @@ public enum PortScanner {
     INSTANCE;
 
     // number of threads used for port discovery
-    private static int MAX_DISCOVERY_THREADS = 16;
+    private static int MAX_DISCOVERY_THREADS = 4;
 
     // port event listeners
     private final List<Consumer<PortEvent>> listeners
@@ -80,7 +80,7 @@ public enum PortScanner {
      * Starts this port scanner with the default period.
      */
     public void start() {
-        start(500/*ms*/);
+        start(250/*ms*/);
     }
 
     private ScheduledExecutorService executor;
