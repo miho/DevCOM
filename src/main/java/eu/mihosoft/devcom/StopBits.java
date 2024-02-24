@@ -37,9 +37,9 @@ public enum StopBits {
         this.value = value;
     }
 
-    /*pkg private */ int getValue() {
+    public int getValue() {
         return this.value;
     }
 
-    private int value;
+    private final int value;
 }

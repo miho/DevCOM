@@ -91,6 +91,24 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
         connection = new StreamConnection<T>(format, onPortOpenedFwd, onIOErrorFwd);
     }
 
+    /**
+     * Gets the timeout for closing the port.
+     * @return the timeout for closing the port in milliseconds
+     */
+    public long getPortCloseTimeout() {
+        return connection.getPortCloseTimeout();
+    }
+
+    /**
+     * Sets the timeout for closing the port.
+     * @param portCloseTimeout the timeout for closing the port in milliseconds
+     * @return this connection
+     */
+    public COMPortConnection<T> setPortCloseTimeout(long portCloseTimeout) {
+        this.connection.setPortCloseTimeout(portCloseTimeout);
+        return this;
+    }
+
 
     @Override
     public COMPortConnection<T> setOnDataReceived(Consumer<T> onDataReceived) {

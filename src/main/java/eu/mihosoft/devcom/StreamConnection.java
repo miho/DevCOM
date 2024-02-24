@@ -66,10 +66,19 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
 
     private long portCloseTimeout = 3000; // ms
 
+    /**
+     * Gets the timeout for closing the port.
+     * @return the timeout for closing the port in milliseconds
+     */
     public long getPortCloseTimeout() {
         return portCloseTimeout;
     }
 
+    /**
+     * Sets the timeout for closing the port.
+     * @param portCloseTimeout the timeout for closing the port in milliseconds
+     * @return this connection
+     */
     public StreamConnection<T> setPortCloseTimeout(long portCloseTimeout) {
         this.portCloseTimeout = portCloseTimeout;
         return this;

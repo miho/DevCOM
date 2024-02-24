@@ -39,7 +39,7 @@ public enum ParityBits {
         this.value = value;
     }
 
-    private int value;
+    private final int value;
 
     public int getValue() {
         return this.value;
