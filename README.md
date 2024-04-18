@@ -18,7 +18,7 @@ Protocol agnostic and concurrent device communication via I/O streams and COM po
 
 ### IDE
 
-Open the `DevCOM` [Gradle](http://www.gradle.org/) project in your favourite IDE (tested with NetBeans 8.2) and build it
+Open the `DevCOM` [Gradle](http://www.gradle.org/) project in your favourite IDE (tested with IntelliJ IDEA 2024.x) and build it
 by calling the `assemble` task.
 
 ### Command Line
