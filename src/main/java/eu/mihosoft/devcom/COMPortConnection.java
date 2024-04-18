@@ -62,6 +62,7 @@ public final class COMPortConnection<T> implements DataConnection<T, COMPortConn
      * @param format the data format to use for communication
      */
     public COMPortConnection(DataFormat<T> format) {
+        DevCOM.checkInit();
         this.onPortFailed = (comPortBonsaiConnection, e) -> {};
         connection = new StreamConnection<>(format);
     }

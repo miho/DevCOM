@@ -70,6 +70,7 @@ public final class Command<T> {
         this.reply = null;
         this.onError = onError;
         this.onCancellationRequested = onCancellationRequested;
+        DevCOM.checkInit();
     }
 
     /**

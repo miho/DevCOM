@@ -73,6 +73,7 @@ public enum PortScanner {
      * @return the instance of this scanner
      */
     public static PortScanner getInstance() {
+        DevCOM.checkInit();
         return INSTANCE;
     }
 

@@ -90,6 +90,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
      * @param format the data format to use for communication
      */
     public StreamConnection(DataFormat<T> format) {
+        DevCOM.checkInit();
         this.format = format;
     }
 
@@ -101,6 +102,7 @@ public final class StreamConnection<T> implements DataConnection<T, StreamConnec
      */
     public StreamConnection(DataFormat<T> format, Consumer<StreamConnection<T>> onConnectionOpened,
                             BiConsumer<StreamConnection<T>, Exception> onIOError) {
+        DevCOM.checkInit();
         this.format = format;
         this.onConnectionOpened = onConnectionOpened;
         this.onIOError = onIOError;

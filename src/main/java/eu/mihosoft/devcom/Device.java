@@ -59,6 +59,7 @@ public final class Device<T> implements AutoCloseable {
     }
 
     private Device(BiConsumer<Device<T>, DataConnection<T, ?>> connectionBehavior) {
+        DevCOM.checkInit();
         this.connectionBehavior = connectionBehavior;
         this.controller = new Controller<>();
     }

@@ -36,6 +36,7 @@ public enum ParityBits {
     SPACE_PARITY(SerialPort.SPACE_PARITY);
 
     private ParityBits(int value) {
+        DevCOM.checkInit();
         this.value = value;
     }
 

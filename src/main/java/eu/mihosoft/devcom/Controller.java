@@ -49,6 +49,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * Creates a new controller instance.
      */
     public Controller() {
+        DevCOM.checkInit();
         this.cmdExecutor = Executors.newSingleThreadExecutor();
         this.executor = Executors.newCachedThreadPool();
     }
@@ -58,6 +59,7 @@ public class Controller<T,V extends DataConnection<T, ?>> implements AutoCloseab
      * @param onInterrupted the consumer to call if the command queue thread is interrupted (may be null)
      */
     public Controller(Consumer<InterruptedException> onInterrupted) {
+        DevCOM.checkInit();
         setOnInterrupted(onInterrupted);
         this.cmdExecutor = Executors.newSingleThreadExecutor();
     }

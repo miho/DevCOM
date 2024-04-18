@@ -34,6 +34,7 @@ public enum StopBits {
 
 
     private StopBits(int value) {
+        DevCOM.checkInit();
         this.value = value;
     }
 
