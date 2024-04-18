@@ -26,7 +26,7 @@ public final class DevCOM {
      * @see <a href="https://github.com/Fazecast/jSerialComm?tab=readme-ov-file#usage">jSerialComm Usage</a>
      */
     public static void init(String appIdForNativeSerialCommResources) {
-        if(appIdForNativeSerialCommResources==null && appIdForNativeSerialCommResources.trim().isEmpty()) {
+        if(appIdForNativeSerialCommResources==null || appIdForNativeSerialCommResources.trim().isEmpty()) {
             System.setProperty("jSerialComm.library.randomizeNativeName", "true");
             Logger.tag(TAG).info("Randomizing jSerialComm native library name.");
         } else {
