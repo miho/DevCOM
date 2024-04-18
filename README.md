@@ -12,13 +12,13 @@ Protocol agnostic and concurrent device communication via I/O streams and COM po
 
 ### Requirements
 
-- Java >= 11 (currently tested with Java 17)
+- Java >= 17 (currently tested with Java 17 and 21)
 - Internet connection (dependencies are downloaded automatically)
 - IDE: [Gradle](http://www.gradle.org/) Plugin (not necessary for command line usage)
 
 ### IDE
 
-Open the `DevCOM` [Gradle](http://www.gradle.org/) project in your favourite IDE (tested with NetBeans 8.2) and build it
+Open the `DevCOM` [Gradle](http://www.gradle.org/) project in your favourite IDE (tested with IntelliJ IDEA 2024.x) and build it
 by calling the `assemble` task.
 
 ### Command Line
